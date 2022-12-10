@@ -2,14 +2,14 @@
 
 #include <stdint.h>
 
-#define STATUS(S, C) ((S >> C) & (uint8_t)1)
-#define NEGATIVE(S)     STATUS(S, 7)
-#define OVERFLOW(S)     STATUS(S, 6)
-#define BREAK(S)        STATUS(S, 4)
-#define DECIMAL(S)      STATUS(S, 3)
-#define INTR_DISABLE(S) STATUS(S, 2)
-#define ZERO(S)         STATUS(S, 1)
-#define CARRY(S)        (S & (uint8_t)1)
+#define BIT(N, X) ((X >> N) & (uint8_t)1)
+#define NEGATIVE(S)     BIT(7, S)
+#define OVERFLOW(S)     BIT(6, S)
+#define BREAK(S)        BIT(4, S)
+#define DECIMAL(S)      BIT(3, S)
+#define INTR_DISABLE(S) BIT(2, S)
+#define ZERO(S)         BIT(1, S)
+#define CARRY(S)        BIT(0, S)
 
 struct registers {
   uint8_t accumulator;
@@ -19,3 +19,5 @@ struct registers {
   uint8_t stack_pointer;
   uint16_t program_counter;
 };
+
+void panic(char *error);
