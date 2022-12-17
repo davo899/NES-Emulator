@@ -1,4 +1,5 @@
 #include "test.h"
+#include <stdio.h>
 
 char *current_test = "(nameless)";
 
