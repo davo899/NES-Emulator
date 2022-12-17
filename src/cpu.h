@@ -23,4 +23,9 @@ struct registers {
   uint16_t program_counter;
 };
 
+struct cpu {
+  struct registers registers;
+  uint8_t *memory;
+};
+
 void panic(char *error);
