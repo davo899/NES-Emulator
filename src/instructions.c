@@ -128,12 +128,12 @@ void (*instruction_table[256]) (enum addressing_mode addressing_mode, struct reg
 };
 
 static void set_NZ_flags(int8_t value, uint8_t *status_register) {
-  *status_register &= ~(0b11);
+  *status_register &= ~(((uint8_t)1 << ZERO_FLAG) & ((uint8_t)1 << NEGATIVE_FLAG));
 
   if (value == 0) {
-    *status_register |= ((uint8_t)1 << 1);
+    *status_register |= ((uint8_t)1 << ZERO_FLAG);
   } else if (value < 0) {
-    *status_register |= (uint8_t)1;
+    *status_register |= ((uint8_t)1 << NEGATIVE_FLAG);
   }
 }
 

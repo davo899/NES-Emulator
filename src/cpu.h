@@ -3,13 +3,13 @@
 #include <stdint.h>
 
 #define BITN(N, X) ((X >> N) & (uint8_t)1)
-#define NEGATIVE(S)     BITN(7, S)
-#define OVERFLOW(S)     BITN(6, S)
-#define BREAK(S)        BITN(4, S)
-#define DECIMAL(S)      BITN(3, S)
-#define INTR_DISABLE(S) BITN(2, S)
-#define ZERO(S)         BITN(1, S)
-#define CARRY(S)        BITN(0, S)
+#define NEGATIVE_FLAG 7
+#define OVERFLOW_FLAG 6
+#define BREAK_FLAG 4
+#define DECIMAL_FLAG 3
+#define INTR_DISABLE_FLAG 2
+#define ZERO_FLAG 1
+#define CARRY_FLAG 0
 
 struct registers {
   uint8_t accumulator;
