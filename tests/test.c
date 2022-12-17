@@ -1,5 +1,6 @@
 #include "test.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 char *current_test = "(nameless)";
 
@@ -12,4 +13,12 @@ void unit_test(char *test_name, void (*test)(void)) {
   current_test = test_name;
   test();
   printf("%s passed\n", test_name);
+}
+
+void test_bytes_equal(uint8_t actual, uint8_t expected) {
+  if (actual != expected) {
+    char *fail_message;
+    sprintf(fail_message, "Bytes not equal:\nExpected:%x\nActual:%x\n", expected, actual);
+    fail(fail_message);
+  }
 }
