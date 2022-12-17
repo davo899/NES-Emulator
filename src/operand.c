@@ -2,51 +2,31 @@
 
 #define ADDRESSING_MASK (0b11100)
 
-static void illegal_addressing_mode() {
-  panic("Illegal addressing mode");
-}
+enum addressing_mode {
+  ACCUMULATOR, IMMEDIATE, IMPLIED, RELATIVE,
+  ABSOLUTE, ABSOLUTE_X, ABSOLUTE_Y,
+  INDIRECT, X_INDIRECT, INDIRECT_Y,
+  ZERO_PAGE, ZERO_PAGE_X, ZERO_PAGE_Y
+};
 
-enum addressing_mode get_addressing_mode(uint8_t opcode) {
-  switch ((opcode & ADDRESSING_MASK) >> 2) {
-    case 0b000:
-      if (BIT(0, opcode))                    return X_INDIRECT;
-      if (BIT(7, opcode) && !BIT(0, opcode)) return IMMEDIATE;
-      illegal_addressing_mode();
-
-    case 0b001:
-      return ZERO_PAGE;
-
-    case 0b010:
-      if      (BIT(0, opcode)) return IMMEDIATE;
-      else if (BIT(1, opcode)) return ACCUMULATOR;
-      illegal_addressing_mode();
-
-    case 0b011:
-      return ABSOLUTE;
-
-    case 0b100:
-      if       (BIT(0, opcode)) return INDIRECT_Y;
-      else if (!BIT(1, opcode)) return RELATIVE;
-      illegal_addressing_mode();
-
-    case 0b101:
-      if (BIT(1, opcode) && !BIT(6, opcode) && BIT(7, opcode))
-        return ZERO_PAGE_Y;
-      return ZERO_PAGE_X;
-
-    case 0b110:
-      if (BIT(0, opcode)) return ABSOLUTE_Y;
-      illegal_addressing_mode();
-
-    case 0b111:
-      if (BIT(1, opcode) && !BIT(6, opcode) && BIT(7, opcode))
-        return ABSOLUTE_Y;
-      return ABSOLUTE_X;
-
-    default:
-      illegal_addressing_mode();
-  }
-}
+enum addressing_mode addressing_mode_table[256] = {
+  IMPLIED,   X_INDIRECT, IMPLIED,   X_INDIRECT, ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   IMPLIED, IMMEDIATE,  ACCUMULATOR, IMMEDIATE,  ABSOLUTE,   ABSOLUTE,   ABSOLUTE,   ABSOLUTE,
+  RELATIVE,  INDIRECT_Y, IMPLIED,   INDIRECT_Y, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_X, IMPLIED, ABSOLUTE_Y, IMPLIED,     ABSOLUTE_Y, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_X,
+  ABSOLUTE,  X_INDIRECT, IMPLIED,   X_INDIRECT, ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   IMPLIED, IMMEDIATE,  ACCUMULATOR, IMMEDIATE,  ABSOLUTE,   ABSOLUTE,   ABSOLUTE,   ABSOLUTE,
+  RELATIVE,  INDIRECT_Y, IMPLIED,   INDIRECT_Y, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_X, IMPLIED, ABSOLUTE_Y, IMPLIED,     ABSOLUTE_Y, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_X,
+  IMPLIED,   X_INDIRECT, IMPLIED,   X_INDIRECT, ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   IMPLIED, IMMEDIATE,  ACCUMULATOR, IMMEDIATE,  ABSOLUTE,   ABSOLUTE,   ABSOLUTE,   ABSOLUTE,
+  RELATIVE,  INDIRECT_Y, IMPLIED,   INDIRECT_Y, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_X, IMPLIED, ABSOLUTE_Y, IMPLIED,     ABSOLUTE_Y, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_X,
+  IMPLIED,   X_INDIRECT, IMPLIED,   X_INDIRECT, ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   IMPLIED, IMMEDIATE,  ACCUMULATOR, IMMEDIATE,  INDIRECT,   ABSOLUTE,   ABSOLUTE,   ABSOLUTE,
+  RELATIVE,  INDIRECT_Y, IMPLIED,   INDIRECT_Y, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_X, IMPLIED, ABSOLUTE_Y, IMPLIED,     ABSOLUTE_Y, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_X,
+  IMMEDIATE, X_INDIRECT, IMMEDIATE, X_INDIRECT, ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   IMPLIED, IMMEDIATE,  IMPLIED,     IMMEDIATE,  ABSOLUTE,   ABSOLUTE,   ABSOLUTE,   ABSOLUTE,
+  RELATIVE,  INDIRECT_Y, IMPLIED,   INDIRECT_Y, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_Y, ZERO_PAGE_Y, IMPLIED, ABSOLUTE_Y, IMPLIED,     ABSOLUTE_Y, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_Y, ABSOLUTE_Y,
+  IMMEDIATE, X_INDIRECT, IMMEDIATE, X_INDIRECT, ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   IMPLIED, IMMEDIATE,  IMPLIED,     IMMEDIATE,  ABSOLUTE,   ABSOLUTE,   ABSOLUTE,   ABSOLUTE,
+  RELATIVE,  INDIRECT_Y, IMPLIED,   INDIRECT_Y, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_Y, ZERO_PAGE_Y, IMPLIED, ABSOLUTE_Y, IMPLIED,     ABSOLUTE_Y, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_Y, ABSOLUTE_Y,
+  IMMEDIATE, X_INDIRECT, IMMEDIATE, X_INDIRECT, ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   IMPLIED, IMMEDIATE,  IMPLIED,     IMMEDIATE,  ABSOLUTE,   ABSOLUTE,   ABSOLUTE,   ABSOLUTE,
+  RELATIVE,  INDIRECT_Y, IMPLIED,   INDIRECT_Y, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_X, IMPLIED, ABSOLUTE_Y, IMPLIED,     ABSOLUTE_Y, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_X,
+  IMMEDIATE, X_INDIRECT, IMMEDIATE, X_INDIRECT, ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   IMPLIED, IMMEDIATE,  IMPLIED,     IMMEDIATE,  ABSOLUTE,   ABSOLUTE,   ABSOLUTE,   ABSOLUTE,
+  RELATIVE,  INDIRECT_Y, IMPLIED,   INDIRECT_Y, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_X, IMPLIED, ABSOLUTE_Y, IMPLIED,     ABSOLUTE_Y, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_X
+};
 
 static uint16_t concat_bytes(uint8_t low_byte, uint8_t high_byte) {
   return (((uint16_t)high_byte) << 8) && (uint16_t)low_byte;
@@ -60,8 +40,8 @@ static uint16_t absolute(struct registers *registers, uint8_t *memory) {
   return concat_bytes(next_byte(registers, memory), next_byte(registers, memory));
 }
 
-uint16_t get_operand(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  switch (addressing_mode) {
+uint16_t get_operand(uint8_t opcode, struct registers *registers, uint8_t *memory) {
+  switch (addressing_mode_table[opcode]) {
     case IMMEDIATE:
       return next_byte(registers, memory);
     case RELATIVE:
