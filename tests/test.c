@@ -10,5 +10,5 @@ void fail(char *message) {
 void unit_test(char *test_name, void (*test)(void)) {
   current_test = test_name;
   test();
-  printf("Passed Test: %s\n", test_name);
+  printf("%s passed\n", test_name);
 }
