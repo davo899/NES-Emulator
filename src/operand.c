@@ -38,6 +38,7 @@ enum addressing_mode get_addressing_mode(uint8_t opcode) {
 }
 
 uint16_t get_operand(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  uint8_t address;
   switch (addressing_mode) {
     case IMMEDIATE:
       return next_byte(registers, memory);
@@ -52,10 +53,10 @@ uint16_t get_operand(enum addressing_mode addressing_mode, struct registers *reg
     case INDIRECT:
       return memory[absolute(registers, memory)];
     case X_INDIRECT:
-      uint8_t address = next_byte(registers, memory) + registers->x;
+      address = next_byte(registers, memory) + registers->x;
       return concat_bytes(memory[(uint16_t)address], memory[(uint16_t)(address + 1)]);
     case INDIRECT_Y:
-      uint8_t address = next_byte(registers, memory);
+      address = next_byte(registers, memory);
       return concat_bytes(memory[(uint16_t)address], memory[(uint16_t)(address + 1)]) + registers->y;
     case ZERO_PAGE:
       return next_byte(registers, memory);
