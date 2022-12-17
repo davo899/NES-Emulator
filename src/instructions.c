@@ -128,13 +128,11 @@ void (*instruction_table[256]) (enum addressing_mode addressing_mode, struct reg
 };
 
 static void set_NZ_flags(int8_t value, uint8_t *status_register) {
-  *status_register &= ~(((uint8_t)1 << ZERO_FLAG) & ((uint8_t)1 << NEGATIVE_FLAG));
+  CLEAR(ZERO_FLAG, *status_register);
+  CLEAR(NEGATIVE_FLAG, *status_register);
 
-  if (value == 0) {
-    *status_register |= ((uint8_t)1 << ZERO_FLAG);
-  } else if (value < 0) {
-    *status_register |= ((uint8_t)1 << NEGATIVE_FLAG);
-  }
+  if (value == 0)     SET(ZERO_FLAG, *status_register);
+  else if (value < 0) SET(NEGATIVE_FLAG, *status_register);
 }
 
 /* Transfer Accumulator to Index X */
@@ -174,5 +172,5 @@ static void TYA(enum addressing_mode addressing_mode, struct registers *register
 
 /* Clear Carry Flag */
 static void CLC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  registers->status &= ~((uint8_t)1 << CARRY_FLAG);
+  CLEAR(CARRY_FLAG, registers->status);
 }
