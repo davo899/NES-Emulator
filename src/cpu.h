@@ -2,14 +2,14 @@
 
 #include <stdint.h>
 
-#define BIT(N, X) ((X >> N) & (uint8_t)1)
-#define NEGATIVE(S)     BIT(7, S)
-#define OVERFLOW(S)     BIT(6, S)
-#define BREAK(S)        BIT(4, S)
-#define DECIMAL(S)      BIT(3, S)
-#define INTR_DISABLE(S) BIT(2, S)
-#define ZERO(S)         BIT(1, S)
-#define CARRY(S)        BIT(0, S)
+#define BITN(N, X) ((X >> N) & (uint8_t)1)
+#define NEGATIVE(S)     BITN(7, S)
+#define OVERFLOW(S)     BITN(6, S)
+#define BREAK(S)        BITN(4, S)
+#define DECIMAL(S)      BITN(3, S)
+#define INTR_DISABLE(S) BITN(2, S)
+#define ZERO(S)         BITN(1, S)
+#define CARRY(S)        BITN(0, S)
 
 struct registers {
   uint8_t accumulator;
