@@ -2,7 +2,7 @@
 
 #define ADDRESSING_MASK (0b11100)
 
-enum addressing_mode addressing_mode_table[256] = {
+static enum addressing_mode addressing_mode_table[256] = {
   IMPLIED,   X_INDIRECT, IMPLIED,   X_INDIRECT, ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   IMPLIED, IMMEDIATE,  ACCUMULATOR, IMMEDIATE,  ABSOLUTE,   ABSOLUTE,   ABSOLUTE,   ABSOLUTE,
   RELATIVE,  INDIRECT_Y, IMPLIED,   INDIRECT_Y, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_X, IMPLIED, ABSOLUTE_Y, IMPLIED,     ABSOLUTE_Y, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_X,
   ABSOLUTE,  X_INDIRECT, IMPLIED,   X_INDIRECT, ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   ZERO_PAGE,   IMPLIED, IMMEDIATE,  ACCUMULATOR, IMMEDIATE,  ABSOLUTE,   ABSOLUTE,   ABSOLUTE,   ABSOLUTE,
@@ -33,8 +33,12 @@ static uint16_t absolute(struct registers *registers, uint8_t *memory) {
   return concat_bytes(next_byte(registers, memory), next_byte(registers, memory));
 }
 
-uint16_t get_operand(uint8_t opcode, struct registers *registers, uint8_t *memory) {
-  switch (addressing_mode_table[opcode]) {
+enum addressing_mode get_addressing_mode(uint8_t opcode) {
+  return addressing_mode_table[opcode];
+}
+
+uint16_t get_operand(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  switch (addressing_mode) {
     case IMMEDIATE:
       return next_byte(registers, memory);
     case RELATIVE:

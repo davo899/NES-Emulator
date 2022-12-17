@@ -3,4 +3,4 @@
 #include "cpu.h"
 #include "memory.h"
 
-extern void (*instruction_table[256]) (enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory);
+void perform_instruction(uint8_t opcode, struct registers *registers, uint8_t *memory);

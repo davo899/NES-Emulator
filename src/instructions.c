@@ -127,6 +127,10 @@ void (*instruction_table[256]) (enum addressing_mode addressing_mode, struct reg
   &BEQ, &SBC, &JAM, &ISC, &NOP, &SBC, &INC, &ISC, &SED, &SBC, &NOP, &ISC, &NOP, &SBC, &INC, &ISC
 };
 
+void perform_instruction(uint8_t opcode, struct registers *registers, uint8_t *memory) {
+  instruction_table[opcode](get_addressing_mode(opcode), registers, memory);
+}
+
 static void set_NZ_flags(int8_t value, uint8_t *status_register) {
   CLEAR(ZERO_FLAG, *status_register);
   CLEAR(NEGATIVE_FLAG, *status_register);
