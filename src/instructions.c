@@ -171,3 +171,8 @@ static void TYA(enum addressing_mode addressing_mode, struct registers *register
   set_NZ_flags(registers->y, &registers->status);
   registers->accumulator = registers->y;
 }
+
+/* Clear Carry Flag */
+static void CLC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  registers->status &= ~((uint8_t)1 << CARRY_FLAG);
+}
