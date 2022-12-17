@@ -17,8 +17,8 @@ void unit_test(char *test_name, void (*test)(void)) {
 
 void test_bytes_equal(uint8_t actual, uint8_t expected) {
   if (actual != expected) {
-    char fail_message[50];
-    sprintf(fail_message, "Bytes not equal\nExpected: 0x%x\nActual:   0x%x\n", expected, actual);
+    char fail_message[49];
+    sprintf(fail_message, "Bytes not equal\nExpected: 0x%x\nActual:   0x%x", expected, actual);
     fail(fail_message);
   }
 }
