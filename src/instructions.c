@@ -174,3 +174,18 @@ static void TYA(enum addressing_mode addressing_mode, struct registers *register
 static void CLC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
   CLEAR(CARRY_FLAG, registers->status);
 }
+
+/* Clear Decimal Mode */
+static void CLD(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  CLEAR(DECIMAL_FLAG, registers->status);
+}
+
+/* Clear Interrupt Disable Bit */
+static void CLI(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  CLEAR(INTR_DISABLE_FLAG, registers->status);
+}
+
+/* Clear Overflow Flag */
+static void CLV(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  CLEAR(OVERFLOW_FLAG, registers->status);
+}
