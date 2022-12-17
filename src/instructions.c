@@ -126,3 +126,48 @@ void (*instruction_table[256]) (enum addressing_mode addressing_mode, struct reg
   &CPX, &SBC, &NOP, &ISC, &CPX, &SBC, &INC, &ISC, &INX, &SBC, &NOP, &UBC, &CPX, &SBC, &INC, &ISC,
   &BEQ, &SBC, &JAM, &ISC, &NOP, &SBC, &INC, &ISC, &SED, &SBC, &NOP, &ISC, &NOP, &SBC, &INC, &ISC
 };
+
+static void set_NZ_flags(int8_t value, uint8_t *status_register) {
+  *status_register &= ~(0b11);
+
+  if (value == 0) {
+    *status_register |= ((uint8_t)1 << 1);
+  } else if (value < 0) {
+    *status_register |= (uint8_t)1;
+  }
+}
+
+/* Transfer Accumulator to Index X */
+static void TAX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  set_NZ_flags(registers->accumulator, &registers->status);
+  registers->x = registers->accumulator;
+}
+
+/* Transfer Accumulator to Index Y */
+static void TAY(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  set_NZ_flags(registers->accumulator, &registers->status);
+  registers->y = registers->accumulator;
+}
+
+/* Transfer Stack Pointer to Index X */
+static void TSX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  set_NZ_flags(registers->stack_pointer, &registers->status);
+  registers->x = registers->stack_pointer;
+}
+
+/* Transfer Index X to Accumulator */
+static void TXA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  set_NZ_flags(registers->x, &registers->status);
+  registers->accumulator = registers->x;
+}
+
+/* Transfer Index X to Stack Pointer */
+static void TXS(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  registers->stack_pointer = registers->x;
+}
+
+/* Transfer Index Y to Accumulator */
+static void TYA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  set_NZ_flags(registers->y, &registers->status);
+  registers->accumulator = registers->y;
+}
