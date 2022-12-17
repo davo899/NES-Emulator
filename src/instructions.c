@@ -175,12 +175,12 @@ static void CLC(enum addressing_mode addressing_mode, struct registers *register
   CLEAR(CARRY_FLAG, registers->status);
 }
 
-/* Clear Decimal Mode */
+/* Clear Decimal Flag */
 static void CLD(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
   CLEAR(DECIMAL_FLAG, registers->status);
 }
 
-/* Clear Interrupt Disable Bit */
+/* Clear Interrupt Disable Flag */
 static void CLI(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
   CLEAR(INTR_DISABLE_FLAG, registers->status);
 }
@@ -188,4 +188,19 @@ static void CLI(enum addressing_mode addressing_mode, struct registers *register
 /* Clear Overflow Flag */
 static void CLV(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
   CLEAR(OVERFLOW_FLAG, registers->status);
+}
+
+/* Set Carry Flag */
+static void SEC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  SET(CARRY_FLAG, registers->status);
+}
+
+/* Set Decimal Flag */
+static void SED(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  SET(DECIMAL_FLAG, registers->status);
+}
+
+/* Set Interrupt Disable Flag */
+static void SEI(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  SET(INTR_DISABLE_FLAG, registers->status);
 }
