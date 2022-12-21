@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 
-#define BITN(N, X)   ((X >> N) & (uint8_t)1)
+#define BITN(N, X)   (((X) >> N) & (uint8_t)1)
 #define SET(N, X)    (*X |= ((uint8_t)1 << N))
 #define CLEAR(N, X)  (*X &= ~((uint8_t)1 << N))
 
