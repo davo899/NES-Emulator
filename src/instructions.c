@@ -183,7 +183,14 @@ static void AND(enum addressing_mode addressing_mode, struct registers *register
   set_NZ_flags(registers->accumulator, &registers->status);
 }
 
-static void ASL(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+/* Shift Left One Bit */
+static void ASL(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  CLEAR(CARRY_FLAG, &registers->status);
+  uint8_t *target = addressing_mode == ACCUMULATOR ? &registers->accumulator : &memory[get_operand_as_address(addressing_mode, registers, memory)];
+  if (BITN(7, *target)) SET(CARRY_FLAG, &registers->status);
+  *target <<= 1;
+  set_NZ_flags(*target, &registers->status);
+}
 
 static void BCC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 static void BCS(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
