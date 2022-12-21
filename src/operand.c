@@ -41,6 +41,7 @@ static uint16_t get_operand(enum addressing_mode addressing_mode, struct registe
   uint8_t address;
   switch (addressing_mode) {
     case IMMEDIATE:
+    case ZERO_PAGE:
       return next_byte(registers, memory);
     case RELATIVE:
       return registers->program_counter + (int8_t)next_byte(registers, memory);
@@ -58,8 +59,6 @@ static uint16_t get_operand(enum addressing_mode addressing_mode, struct registe
     case INDIRECT_Y:
       address = next_byte(registers, memory);
       return concat_bytes(memory[(uint16_t)address], memory[(uint16_t)(address + 1)]) + registers->y;
-    case ZERO_PAGE:
-      return next_byte(registers, memory);
     case ZERO_PAGE_X:
       return next_byte(registers, memory) + registers->x;
     case ZERO_PAGE_Y:
