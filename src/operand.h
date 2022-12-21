@@ -11,4 +11,5 @@ enum addressing_mode {
 };
 
 enum addressing_mode get_addressing_mode(uint8_t opcode);
-uint16_t get_operand(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory);
+uint16_t get_operand_as_address(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory);
+uint8_t get_operand_as_value(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory);

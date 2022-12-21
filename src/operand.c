@@ -37,7 +37,7 @@ enum addressing_mode get_addressing_mode(uint8_t opcode) {
   return addressing_mode_table[opcode];
 }
 
-uint16_t get_operand(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+static uint16_t get_operand(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
   uint8_t address;
   switch (addressing_mode) {
     case IMMEDIATE:
@@ -71,4 +71,13 @@ uint16_t get_operand(enum addressing_mode addressing_mode, struct registers *reg
     default:
       panic("Unlisted addressing mode taken from opcode");
   }
+}
+
+uint16_t get_operand_as_address(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  return get_operand(addressing_mode, registers, memory);
+}
+
+uint8_t get_operand_as_value(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  uint16_t operand = get_operand(addressing_mode, registers, memory);
+  return addressing_mode == IMMEDIATE ? (uint8_t)operand : memory[operand];
 }
