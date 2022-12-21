@@ -177,7 +177,12 @@ static void ADC(enum addressing_mode addressing_mode, struct registers *register
   set_NZ_flags(result, &registers->status);
 }
 
-static void AND(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+/* AND with Accumulator */
+static void AND(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  registers->accumulator &= get_operand_as_value(addressing_mode, registers, memory);
+  set_NZ_flags(registers->accumulator, &registers->status);
+}
+
 static void ASL(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 
 static void BCC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
