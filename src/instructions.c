@@ -2,6 +2,8 @@
 #include "operand.h"
 #include <stdbool.h>
 
+#define BYTE_MAX 0xFF
+
 // Instructions
 static void ADC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory);
 static void AND(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory);
@@ -132,15 +134,47 @@ void perform_instruction(uint8_t opcode, struct registers *registers, uint8_t *m
   instruction_table[opcode](get_addressing_mode(opcode), registers, memory);
 }
 
-static void set_overflow(uint8_t *status_register, uint8_t left, uint8_t right, uint8_t result) {
-  if (BITN(7, (left | result) & (right | result)))
-    SET(OVERFLOW_FLAG, status_register);
-  else
-    CLEAR(OVERFLOW_FLAG, status_register);
+static void set_NZ_flags(int8_t value, uint8_t *status_register) {
+  CLEAR(ZERO_FLAG, status_register);
+  CLEAR(NEGATIVE_FLAG, status_register);
+
+  if (value == 0)     SET(ZERO_FLAG, status_register);
+  else if (value < 0) SET(NEGATIVE_FLAG, status_register);
+}
+
+static void set_VC_flags(uint8_t *status_register, uint8_t left, uint8_t right, uint8_t result) {
+  if ((int)left + (int)right > BYTE_MAX)           SET(CARRY_FLAG, status_register);
+  if (BITN(7, (left ^ result) & (right ^ result))) SET(OVERFLOW_FLAG, status_register);
 }
 
 /* Add to Accumulator with Carry */
 static void ADC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  uint8_t operand = get_operand_as_value(addressing_mode, registers, memory);
+  uint8_t result = registers->accumulator + operand;
+
+  CLEAR(OVERFLOW_FLAG, &registers->status);
+  set_VC_flags(&registers->status, registers->accumulator, operand, result);
+
+  if (BITN(CARRY_FLAG, registers->status)) {
+    CLEAR(CARRY_FLAG, &registers->status);
+    set_VC_flags(&registers->status, result, 1, ++result);
+  } else
+    CLEAR(CARRY_FLAG, &registers->status);
+
+  if (BITN(DECIMAL_FLAG, registers->status)) {
+    if ((result & 0xF) > 9) {
+      set_VC_flags(&registers->status, result, 6, result + 6);
+      result += 6;
+    }
+
+    if ((result >> 4) > 9) {
+      set_VC_flags(&registers->status, result, 0x60, result + 0x60);
+      result += 0x60;
+    }
+  }
+
+  registers->accumulator = result;
+  set_NZ_flags(result, &registers->status);
 }
 
 static void AND(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
@@ -233,14 +267,6 @@ static void SEI(enum addressing_mode addressing_mode, struct registers *register
 static void STA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 static void STX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 static void STY(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-
-static void set_NZ_flags(int8_t value, uint8_t *status_register) {
-  CLEAR(ZERO_FLAG, status_register);
-  CLEAR(NEGATIVE_FLAG, status_register);
-
-  if (value == 0)     SET(ZERO_FLAG, status_register);
-  else if (value < 0) SET(NEGATIVE_FLAG, status_register);
-}
 
 /* Transfer Accumulator to Index X */
 static void TAX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
