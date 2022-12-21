@@ -1,5 +1,6 @@
 #include "instructions.h"
 #include "operand.h"
+#include <stdbool.h>
 
 // Instructions
 static void ADC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory);
@@ -131,86 +132,17 @@ void perform_instruction(uint8_t opcode, struct registers *registers, uint8_t *m
   instruction_table[opcode](get_addressing_mode(opcode), registers, memory);
 }
 
-static void set_NZ_flags(int8_t value, uint8_t *status_register) {
-  CLEAR(ZERO_FLAG, *status_register);
-  CLEAR(NEGATIVE_FLAG, *status_register);
-
-  if (value == 0)     SET(ZERO_FLAG, *status_register);
-  else if (value < 0) SET(NEGATIVE_FLAG, *status_register);
+static void set_overflow(uint8_t *status_register, uint8_t left, uint8_t right, uint8_t result) {
+  if (BITN(7, (left | result) & (right | result)))
+    SET(OVERFLOW_FLAG, status_register);
+  else
+    CLEAR(OVERFLOW_FLAG, status_register);
 }
 
-/* Transfer Accumulator to Index X */
-static void TAX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  set_NZ_flags(registers->accumulator, &registers->status);
-  registers->x = registers->accumulator;
+/* Add to Accumulator with Carry */
+static void ADC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
 }
 
-/* Transfer Accumulator to Index Y */
-static void TAY(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  set_NZ_flags(registers->accumulator, &registers->status);
-  registers->y = registers->accumulator;
-}
-
-/* Transfer Stack Pointer to Index X */
-static void TSX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  set_NZ_flags(registers->stack_pointer, &registers->status);
-  registers->x = registers->stack_pointer;
-}
-
-/* Transfer Index X to Accumulator */
-static void TXA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  set_NZ_flags(registers->x, &registers->status);
-  registers->accumulator = registers->x;
-}
-
-/* Transfer Index X to Stack Pointer */
-static void TXS(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  registers->stack_pointer = registers->x;
-}
-
-/* Transfer Index Y to Accumulator */
-static void TYA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  set_NZ_flags(registers->y, &registers->status);
-  registers->accumulator = registers->y;
-}
-
-/* Clear Carry Flag */
-static void CLC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  CLEAR(CARRY_FLAG, registers->status);
-}
-
-/* Clear Decimal Flag */
-static void CLD(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  CLEAR(DECIMAL_FLAG, registers->status);
-}
-
-/* Clear Interrupt Disable Flag */
-static void CLI(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  CLEAR(INTR_DISABLE_FLAG, registers->status);
-}
-
-/* Clear Overflow Flag */
-static void CLV(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  CLEAR(OVERFLOW_FLAG, registers->status);
-}
-
-/* Set Carry Flag */
-static void SEC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  SET(CARRY_FLAG, registers->status);
-}
-
-/* Set Decimal Flag */
-static void SED(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  SET(DECIMAL_FLAG, registers->status);
-}
-
-/* Set Interrupt Disable Flag */
-static void SEI(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  SET(INTR_DISABLE_FLAG, registers->status);
-}
-
-
-static void ADC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 static void AND(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 static void ASL(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 
@@ -224,6 +156,26 @@ static void BPL(enum addressing_mode addressing_mode, struct registers *register
 static void BRK(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 static void BVC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 static void BVS(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+
+/* Clear Carry Flag */
+static void CLC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  CLEAR(CARRY_FLAG, &registers->status);
+}
+
+/* Clear Decimal Flag */
+static void CLD(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  CLEAR(DECIMAL_FLAG, &registers->status);
+}
+
+/* Clear Interrupt Disable Flag */
+static void CLI(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  CLEAR(INTR_DISABLE_FLAG, &registers->status);
+}
+
+/* Clear Overflow Flag */
+static void CLV(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  CLEAR(OVERFLOW_FLAG, &registers->status);
+}
 
 static void CMP(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 static void CPX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
@@ -262,9 +214,68 @@ static void RTI(enum addressing_mode addressing_mode, struct registers *register
 static void RTS(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 
 static void SBC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+
+/* Set Carry Flag */
+static void SEC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  SET(CARRY_FLAG, &registers->status);
+}
+
+/* Set Decimal Flag */
+static void SED(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  SET(DECIMAL_FLAG, &registers->status);
+}
+
+/* Set Interrupt Disable Flag */
+static void SEI(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  SET(INTR_DISABLE_FLAG, &registers->status);
+}
+
 static void STA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 static void STX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 static void STY(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+
+static void set_NZ_flags(int8_t value, uint8_t *status_register) {
+  CLEAR(ZERO_FLAG, status_register);
+  CLEAR(NEGATIVE_FLAG, status_register);
+
+  if (value == 0)     SET(ZERO_FLAG, status_register);
+  else if (value < 0) SET(NEGATIVE_FLAG, status_register);
+}
+
+/* Transfer Accumulator to Index X */
+static void TAX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  set_NZ_flags(registers->accumulator, &registers->status);
+  registers->x = registers->accumulator;
+}
+
+/* Transfer Accumulator to Index Y */
+static void TAY(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  set_NZ_flags(registers->accumulator, &registers->status);
+  registers->y = registers->accumulator;
+}
+
+/* Transfer Stack Pointer to Index X */
+static void TSX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  set_NZ_flags(registers->stack_pointer, &registers->status);
+  registers->x = registers->stack_pointer;
+}
+
+/* Transfer Index X to Accumulator */
+static void TXA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  set_NZ_flags(registers->x, &registers->status);
+  registers->accumulator = registers->x;
+}
+
+/* Transfer Index X to Stack Pointer */
+static void TXS(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  registers->stack_pointer = registers->x;
+}
+
+/* Transfer Index Y to Accumulator */
+static void TYA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  set_NZ_flags(registers->y, &registers->status);
+  registers->accumulator = registers->y;
+}
 
 // Illegal Opcode Instructions
 static void ALR(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}

@@ -3,8 +3,8 @@
 #include <stdint.h>
 
 #define BITN(N, X)   ((X >> N) & (uint8_t)1)
-#define SET(N, X)    (X |= ((uint8_t)1 << N))
-#define CLEAR(N, X)  (X &= ~((uint8_t)1 << N))
+#define SET(N, X)    (*X |= ((uint8_t)1 << N))
+#define CLEAR(N, X)  (*X &= ~((uint8_t)1 << N))
 
 #define NEGATIVE_FLAG 7
 #define OVERFLOW_FLAG 6
