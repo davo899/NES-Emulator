@@ -6,6 +6,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+static struct cpu blank_cpu;
+static struct registers blank_registers;
+
 static void test_ADC();
 static void test_AND();
 static void test_ASL();
@@ -157,7 +160,7 @@ static inline uint8_t *register_from_offset(struct registers *registers, int off
 }
 
 static void test_ADC() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(2, 1);
   cpu.registers.status = 0b00000001;
   cpu.registers.accumulator = 34;
@@ -183,7 +186,7 @@ static void test_ADC() {
 }
 
 static void test_AND() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(2, 1);
   cpu.registers.accumulator = 0b10100101;
   cpu.memory[1] = 0b11110000;
@@ -193,7 +196,7 @@ static void test_AND() {
 }
 
 static void test_ASL() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.registers.accumulator = 0b10100101;
   perform_instruction(0x0A, &cpu.registers, cpu.memory);
   test_bytes_equal(cpu.registers.accumulator, 0b01001010);
@@ -201,7 +204,7 @@ static void test_ASL() {
 }
 
 static void test_flag_branch(uint8_t opcode, int flag, bool should_branch_when_set) {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(2, 1);
   cpu.memory[1] = 10;
   perform_instruction(opcode, &cpu.registers, cpu.memory);
@@ -225,7 +228,7 @@ static void test_BPL() { test_flag_branch(0x10, 7, false); }
 static void test_BMI() { test_flag_branch(0x30, 7, true); }
 
 static void test_BIT() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(2, 1);
   cpu.memory[0] = 0b11111111;
   cpu.memory[1] = 0;
@@ -243,7 +246,7 @@ static void test_BIT() {
 }
 
 static void test_BRK() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(0x10000, 1);
   cpu.registers.program_counter = 0x4629;
   cpu.memory[0xFFFF] = 0x23;
@@ -260,7 +263,7 @@ static void test_BRK() {
 }
 
 static void test_flag_clear(uint8_t opcode, int flag) {
-  struct registers registers;
+  struct registers registers = blank_registers;
   registers.status = (uint8_t)1 << flag;
   perform_instruction(opcode, &registers, NULL);
   test_bytes_equal(registers.status, 0);
@@ -275,7 +278,7 @@ static void test_CLV() { test_flag_clear(0xB8, 6); }
 // Z = A == M
 // N = A > M
 static void test_compare_register(uint8_t opcode, int reg) {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(4, 1);
   *register_from_offset(&cpu.registers, reg) = 77;
 
@@ -305,24 +308,24 @@ static void test_inc_dec(uint8_t opcode, struct cpu *cpu, uint8_t *byte, bool in
 }
 
 static void test_DEC() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(2, 1);
   test_inc_dec(0xC6, &cpu, &cpu.memory[0], false);
   free(cpu.memory);
 }
 
 static void test_DEX() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   test_inc_dec(0xCA, &cpu, &cpu.registers.x, false);
 }
 
 static void test_DEY() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   test_inc_dec(0x88, &cpu, &cpu.registers.y, false);
 }
 
 static void test_EOR() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(2, 1);
   cpu.memory[1] = 0b11110000;
   cpu.registers.accumulator = 0b10101010;
@@ -332,24 +335,24 @@ static void test_EOR() {
 }
 
 static void test_INC() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(2, 1);
   test_inc_dec(0xE6, &cpu, &cpu.memory[0], true);
   free(cpu.memory);
 }
 
 static void test_INX() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   test_inc_dec(0xE8, &cpu, &cpu.registers.x, true);
 }
 
 static void test_INY() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   test_inc_dec(0xC8, &cpu, &cpu.registers.y, true);
 }
 
 static void test_JMP() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(3, 1);
   cpu.memory[1] = 0x9F;
   cpu.memory[2] = 0x8C;
@@ -359,7 +362,7 @@ static void test_JMP() {
 }
 
 static void test_JSR() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(0x200, 1);
   cpu.memory[0xFE] = 0x9F;
   cpu.memory[0xFF] = 0x8C;
@@ -372,7 +375,7 @@ static void test_JSR() {
 }
 
 static void test_load_register(uint8_t opcode, int reg) {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(2, 1);
   cpu.memory[1] = 0xCC;
   perform_instruction(opcode, &cpu.registers, cpu.memory);
@@ -385,7 +388,7 @@ static void test_LDX() { test_load_register(0xA2, offsetof(struct registers, x))
 static void test_LDY() { test_load_register(0xA0, offsetof(struct registers, y)); }
 
 static void test_LSR() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.registers.status = 0b10000000;
   cpu.registers.accumulator = 1;
   perform_instruction(0x4A, &cpu.registers, cpu.memory);
@@ -396,7 +399,7 @@ static void test_LSR() {
 static void test_NOP() { perform_instruction(0xEA, NULL, NULL); }
 
 static void test_ORA() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(2, 1);
   cpu.memory[1] = 0b11110000;
   cpu.registers.accumulator = 0b10101010;
@@ -406,7 +409,7 @@ static void test_ORA() {
 }
 
 static void test_PHA() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(0x200, 1);
   cpu.registers.accumulator = 157;
   perform_instruction(0x48, &cpu.registers, cpu.memory);
@@ -416,7 +419,7 @@ static void test_PHA() {
 }
 
 static void test_PHP() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(0x200, 1);
   cpu.registers.status = 0b11001111;
   perform_instruction(0x08, &cpu.registers, cpu.memory);
@@ -426,7 +429,7 @@ static void test_PHP() {
 }
 
 static void test_PLA() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(0x200, 1);
   cpu.memory[0x1FF] = 202;
   cpu.registers.stack_pointer = 0xFF;
@@ -437,7 +440,7 @@ static void test_PLA() {
 }
 
 static void test_PLP() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(0x200, 1);
   cpu.memory[0x1FF] = 0b11111111;
   cpu.registers.stack_pointer = 0xFF;
@@ -448,7 +451,7 @@ static void test_PLP() {
 }
 
 static void test_ROL() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.registers.accumulator = 0b10101010;
   perform_instruction(0x2A, &cpu.registers, cpu.memory);
   test_bytes_equal(cpu.registers.accumulator, 0b01010100);
@@ -459,7 +462,7 @@ static void test_ROL() {
 }
 
 static void test_ROR() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.registers.accumulator = 0b10101010;
   perform_instruction(0x6A, &cpu.registers, cpu.memory);
   test_bytes_equal(cpu.registers.accumulator, 0b01010101);
@@ -470,7 +473,7 @@ static void test_ROR() {
 }
 
 static void test_RTI() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(0x200, 1);
   cpu.memory[0x1FF] = 0xAD;
   cpu.memory[0x1FE] = 0x53;
@@ -483,7 +486,7 @@ static void test_RTI() {
 }
 
 static void test_RTS() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(0x200, 1);
   cpu.memory[0x1FF] = 0xAD;
   cpu.memory[0x1FE] = 0x53;
@@ -495,7 +498,7 @@ static void test_RTS() {
 }
 
 static void test_SBC() {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(2, 1);
   cpu.registers.status = 0b00000000;
   cpu.registers.accumulator = 45;
@@ -521,7 +524,7 @@ static void test_SBC() {
 }
 
 static void test_flag_set(uint8_t opcode, int flag) {
-  struct registers registers;
+  struct registers registers = blank_registers;
   perform_instruction(opcode, &registers, NULL);
   test_bytes_equal(registers.status, (uint8_t)1 << flag);
 }
@@ -531,7 +534,7 @@ static void test_SED() { test_flag_set(0xF8, 3); }
 static void test_SEI() { test_flag_set(0x78, 2); }
 
 static void test_store_register(uint8_t opcode, int reg) {
-  struct cpu cpu;
+  struct cpu cpu = blank_cpu;
   cpu.memory = calloc(2, 1);
   *register_from_offset(&cpu.registers, reg) = 0xCC;
   cpu.memory[1] = 0;
@@ -545,7 +548,7 @@ static void test_STX() { test_store_register(0x86, offsetof(struct registers, x)
 static void test_STY() { test_store_register(0x84, offsetof(struct registers, y)); }
 
 static void test_transfer(uint8_t opcode, int from, int to) {
-  struct registers registers;
+  struct registers registers = blank_registers;
   *register_from_offset(&registers, from) = 77;
   perform_instruction(opcode, &registers, NULL);
   test_bytes_equal(*register_from_offset(&registers, to), 77);
@@ -561,7 +564,7 @@ static void test_TSX() { test_transfer(0xBA, offsetof(struct registers, stack_po
 static void test_TXS() { test_transfer(0x9A, offsetof(struct registers, x), offsetof(struct registers, stack_pointer)); }
 
 static void test_set_NZ_flags() {
-  struct registers registers;
+  struct registers registers = blank_registers;
   registers.accumulator = 0;
   perform_instruction(0xAA, &registers, NULL);
   test_bytes_equal(registers.status, 0b00000010);
