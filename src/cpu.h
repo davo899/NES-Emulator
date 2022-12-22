@@ -28,4 +28,5 @@ struct cpu {
   uint8_t *memory;
 };
 
+void load_program_at(uint16_t offset, uint8_t program[], int size, struct cpu *cpu);
 void panic(char *error);
