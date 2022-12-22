@@ -30,7 +30,8 @@ static inline uint8_t next_byte(struct registers *registers, uint8_t *memory) {
 }
 
 static uint16_t absolute(struct registers *registers, uint8_t *memory) {
-  return concat_bytes(next_byte(registers, memory), next_byte(registers, memory));
+  uint8_t low_byte = next_byte(registers, memory);
+  return concat_bytes(low_byte, next_byte(registers, memory));
 }
 
 enum addressing_mode get_addressing_mode(uint8_t opcode) {
