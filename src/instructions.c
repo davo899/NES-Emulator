@@ -493,9 +493,20 @@ static void SEI(enum addressing_mode addressing_mode, struct registers *register
   SET(INTR_DISABLE_FLAG, &registers->status);
 }
 
-static void STA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void STX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void STY(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+/* Store Accumulator in Memory */
+static void STA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  memory[get_operand_as_address(addressing_mode, registers, memory)] = registers->accumulator;
+}
+
+/* Store Index X in Memory */
+static void STX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  memory[get_operand_as_address(addressing_mode, registers, memory)] = registers->x;
+}
+
+/* Store Index Y in Memory */
+static void STY(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  memory[get_operand_as_address(addressing_mode, registers, memory)] = registers->y;
+}
 
 /* Transfer Accumulator to Index X */
 static void TAX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
