@@ -247,11 +247,15 @@ static void BPL(enum addressing_mode addressing_mode, struct registers *register
   branch_on_flag(IS_CLEAR, NEGATIVE_FLAG, addressing_mode, registers, memory);
 }
 
+static void push_PC_plus_two(struct registers *registers, uint8_t *memory) {
+  uint16_t return_address = registers->program_counter + 2;
+  push_byte_to_stack(return_address >> 8, registers, memory);
+  push_byte_to_stack(return_address & 0xFF, registers, memory);
+}
+
 /* Force Break */
 static void BRK(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  registers->program_counter += 2;
-  push_byte_to_stack(registers->program_counter >> 8, registers, memory);
-  push_byte_to_stack(registers->program_counter & 0xFF, registers, memory);
+  push_PC_plus_two(registers, memory);
   push_byte_to_stack(registers->status | ((uint8_t)1 << BREAK_FLAG), registers, memory);
   SET(INTR_DISABLE_FLAG, &registers->status);
   registers->program_counter = concat_bytes(memory[0xFFFE], memory[0xFFFF]);
@@ -352,8 +356,16 @@ static void INY(enum addressing_mode addressing_mode, struct registers *register
   set_NZ_flags(++registers->y, &registers->status);
 }
 
-static void JMP(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void JSR(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+/* Jump to New Location */
+static void JMP(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  registers->program_counter = get_operand_as_address(addressing_mode, registers, memory);
+}
+
+/* Jump to New Location Saving Return Address */
+static void JSR(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  push_PC_plus_two(registers, memory);
+  registers->program_counter = get_operand_as_address(addressing_mode, registers, memory);
+}
 
 static void LDA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 static void LDX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
