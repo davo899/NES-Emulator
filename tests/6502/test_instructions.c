@@ -499,25 +499,24 @@ static void test_RTS() {
 static void test_SBC() {
   struct cpu cpu = blank_cpu;
   cpu.memory = calloc(2, 1);
-  cpu.registers.status = 0b00000000;
   cpu.registers.accumulator = 45;
   cpu.memory[1] = 34;
   perform_instruction(0xE9, &cpu.registers, cpu.memory);
   test_bytes_equal(cpu.registers.accumulator, 45 - 34 - 1);
 
   cpu.registers.program_counter = 0;
-  cpu.registers.accumulator = 0x80;
-  cpu.memory[1] = 1;
+  cpu.registers.accumulator = 0x40;
+  cpu.memory[1] = 0xc0;
   perform_instruction(0xE9, &cpu.registers, cpu.memory);
   test_bytes_equal(cpu.registers.accumulator, 0x80);
-  test_bytes_equal(cpu.registers.status, 0b01000001);
+  test_bytes_equal(cpu.registers.status, 0b11000000);
 
   cpu.registers.program_counter = 0;
-  cpu.registers.status = 0b10001000;
-  cpu.registers.accumulator = 0x98;
+  cpu.registers.status = 0b10001001;
+  cpu.registers.accumulator = 0x48;
   cpu.memory[1] = 0x29;
   perform_instruction(0xE9, &cpu.registers, cpu.memory);
-  test_bytes_equal(cpu.registers.accumulator, 0x69);
+  test_bytes_equal(cpu.registers.accumulator, 0x19);
   test_bytes_equal(cpu.registers.status, 0b00001001);
   free(cpu.memory);
 }

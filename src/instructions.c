@@ -158,9 +158,17 @@ static void set_NZ_flags(int8_t value, uint8_t *status_register) {
   else if (value < 0) SET(NEGATIVE_FLAG, status_register);
 }
 
-static void set_VC_flags(uint8_t *status_register, uint8_t left, uint8_t right, uint8_t result) {
-  if ((int)left + (int)right > BYTE_MAX)           SET(CARRY_FLAG, status_register);
-  if (BITN(7, (left ^ result) & (right ^ result))) SET(OVERFLOW_FLAG, status_register);
+static inline uint8_t twos_complement_of(int8_t value) {
+  return (uint8_t)(-value);
+}
+
+static void add_to_accumulator(uint8_t operand, struct registers *registers) {
+  if ((int)registers->accumulator + (int)operand > BYTE_MAX) SET(CARRY_FLAG, &registers->status);
+
+  uint8_t result = registers->accumulator + operand;
+  if (BITN(7, (registers->accumulator ^ result) & (operand ^ result))) SET(OVERFLOW_FLAG, &registers->status);
+
+  registers->accumulator = result;
 }
 
 static void shift(bool left, enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
@@ -173,32 +181,22 @@ static void shift(bool left, enum addressing_mode addressing_mode, struct regist
 
 /* Add to Accumulator with Carry */
 static void ADC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  uint8_t operand = get_operand_as_value(addressing_mode, registers, memory);
-  uint8_t result = registers->accumulator + operand;
-
   CLEAR(OVERFLOW_FLAG, &registers->status);
-  set_VC_flags(&registers->status, registers->accumulator, operand, result);
 
   if (BITN(CARRY_FLAG, registers->status)) {
     CLEAR(CARRY_FLAG, &registers->status);
-    set_VC_flags(&registers->status, result, 1, ++result);
+    add_to_accumulator(1, registers);
   } else
     CLEAR(CARRY_FLAG, &registers->status);
 
-  if (BITN(DECIMAL_FLAG, registers->status)) {
-    if ((result & 0xF) > 9) {
-      set_VC_flags(&registers->status, result, 6, result + 6);
-      result += 6;
-    }
+  add_to_accumulator(get_operand_as_value(addressing_mode, registers, memory), registers);
 
-    if ((result >> 4) > 9) {
-      set_VC_flags(&registers->status, result, 0x60, result + 0x60);
-      result += 0x60;
-    }
+  if (BITN(DECIMAL_FLAG, registers->status)) {
+    if ((registers->accumulator & 0xF) > 9) add_to_accumulator(6, registers);
+    if ((registers->accumulator >> 4) > 9)  add_to_accumulator(0x60, registers);
   }
 
-  registers->accumulator = result;
-  set_NZ_flags(result, &registers->status);
+  set_NZ_flags(registers->accumulator, &registers->status);
 }
 
 /* AND with Accumulator */
@@ -461,7 +459,24 @@ static void RTS(enum addressing_mode addressing_mode, struct registers *register
   registers->program_counter = concat_bytes(low_byte, pop_byte_from_stack(registers, memory));
 }
 
-static void SBC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+/* Subtract from Accumulator with Borrow */
+static void SBC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  CLEAR(OVERFLOW_FLAG, &registers->status);
+
+  if (!BITN(CARRY_FLAG, registers->status)) {
+    add_to_accumulator(twos_complement_of(1), registers);
+  } else
+    CLEAR(CARRY_FLAG, &registers->status);
+
+  add_to_accumulator(twos_complement_of(get_operand_as_value(addressing_mode, registers, memory)), registers);
+
+  if (BITN(DECIMAL_FLAG, registers->status)) {
+    if ((registers->accumulator & 0xF) > 9) add_to_accumulator(twos_complement_of(6), registers);
+    if ((registers->accumulator >> 4) > 9)  add_to_accumulator(twos_complement_of(0x60), registers);
+  }
+
+  set_NZ_flags(registers->accumulator, &registers->status);
+}
 
 /* Set Carry Flag */
 static void SEC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
