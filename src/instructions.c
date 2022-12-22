@@ -333,7 +333,8 @@ static void DEY(enum addressing_mode addressing_mode, struct registers *register
 
 /* Exclusive-OR with Accumulator */
 static void EOR(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-
+  registers->accumulator ^= get_operand_as_value(addressing_mode, registers, memory);
+  set_NZ_flags(registers->accumulator, &registers->status);
 }
 
 static void INC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
