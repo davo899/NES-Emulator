@@ -274,25 +274,24 @@ static void test_CLD() { test_flag_clear(0xD8, 3); }
 static void test_CLI() { test_flag_clear(0x58, 2); }
 static void test_CLV() { test_flag_clear(0xB8, 6); }
 
-// C = A >= M
-// Z = A == M
-// N = A > M
 static void test_compare_register(uint8_t opcode, int reg) {
   struct cpu cpu = blank_cpu;
-  cpu.memory = calloc(4, 1);
+  cpu.memory = calloc(2, 1);
   *register_from_offset(&cpu.registers, reg) = 77;
 
   cpu.memory[1] = 77;
   perform_instruction(opcode, &cpu.registers, cpu.memory);
   test_bytes_equal(cpu.registers.status, 0b00000011);
   
-  cpu.memory[2] = 76;
+  cpu.registers.program_counter = 0;
+  cpu.memory[1] = 76;
   perform_instruction(opcode, &cpu.registers, cpu.memory);
-  test_bytes_equal(cpu.registers.status, 0b10000001);
+  test_bytes_equal(cpu.registers.status, 0b00000001);
   
-  cpu.memory[3] = 78;
+  cpu.registers.program_counter = 0;
+  cpu.memory[1] = 78;
   perform_instruction(opcode, &cpu.registers, cpu.memory);
-  test_bytes_equal(cpu.registers.status, 0b00000000);
+  test_bytes_equal(cpu.registers.status, 0b10000000);
 
   free(cpu.memory);
 }
