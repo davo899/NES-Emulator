@@ -318,20 +318,23 @@ static void CPY(enum addressing_mode addressing_mode, struct registers *register
 
 /* Decrement Memory by One */
 static void DEC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  memory[get_operand_as_address(addressing_mode, registers, memory)]--;
+  set_NZ_flags(--memory[get_operand_as_address(addressing_mode, registers, memory)], &registers->status);
 }
 
 /* Decrement Index X by One */
 static void DEX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  registers->x--;
+  set_NZ_flags(--registers->x, &registers->status);
 }
 
 /* Decrement Index Y by One */
 static void DEY(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  registers->y--;
+  set_NZ_flags(--registers->y, &registers->status);
 }
 
-static void EOR(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+/* Exclusive-OR with Accumulator */
+static void EOR(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+
+}
 
 static void INC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 static void INX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
