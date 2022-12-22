@@ -141,6 +141,12 @@ static void push_byte_to_stack(uint8_t byte, struct registers *registers, uint8_
   memory[0x100 + registers->stack_pointer] = byte;
 }
 
+static void push_PC_plus_two(struct registers *registers, uint8_t *memory) {
+  uint16_t return_address = registers->program_counter + 2;
+  push_byte_to_stack(return_address >> 8, registers, memory);
+  push_byte_to_stack(return_address & 0xFF, registers, memory);
+}
+
 static void set_NZ_flags(int8_t value, uint8_t *status_register) {
   CLEAR(ZERO_FLAG, status_register);
   CLEAR(NEGATIVE_FLAG, status_register);
@@ -245,12 +251,6 @@ static void BNE(enum addressing_mode addressing_mode, struct registers *register
 /* Branch on Result Plus */
 static void BPL(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
   branch_on_flag(IS_CLEAR, NEGATIVE_FLAG, addressing_mode, registers, memory);
-}
-
-static void push_PC_plus_two(struct registers *registers, uint8_t *memory) {
-  uint16_t return_address = registers->program_counter + 2;
-  push_byte_to_stack(return_address >> 8, registers, memory);
-  push_byte_to_stack(return_address & 0xFF, registers, memory);
 }
 
 /* Force Break */
@@ -367,9 +367,24 @@ static void JSR(enum addressing_mode addressing_mode, struct registers *register
   registers->program_counter = get_operand_as_address(addressing_mode, registers, memory);
 }
 
-static void LDA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void LDX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void LDY(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+/* Load Accumulator */
+static void LDA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  registers->accumulator = get_operand_as_value(addressing_mode, registers, memory);
+  set_NZ_flags(registers->accumulator, &registers->status);
+}
+
+/* Load Index X */
+static void LDX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  registers->x = get_operand_as_value(addressing_mode, registers, memory);
+  set_NZ_flags(registers->x, &registers->status);
+}
+
+/* Load Index Y */
+static void LDY(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  registers->y = get_operand_as_value(addressing_mode, registers, memory);
+  set_NZ_flags(registers->y, &registers->status);
+}
+
 static void LSR(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 
 static void NOP(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
