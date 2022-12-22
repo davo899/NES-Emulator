@@ -337,9 +337,20 @@ static void EOR(enum addressing_mode addressing_mode, struct registers *register
   set_NZ_flags(registers->accumulator, &registers->status);
 }
 
-static void INC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void INX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void INY(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+/* Increment Memory by One */
+static void INC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  set_NZ_flags(++memory[get_operand_as_address(addressing_mode, registers, memory)], &registers->status);
+}
+
+/* Increment Index X by One */
+static void INX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  set_NZ_flags(++registers->x, &registers->status);
+}
+
+/* Increment Index Y by One */
+static void INY(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  set_NZ_flags(++registers->y, &registers->status);
+}
 
 static void JMP(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 static void JSR(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
