@@ -160,6 +160,14 @@ static void set_VC_flags(uint8_t *status_register, uint8_t left, uint8_t right, 
   if (BITN(7, (left ^ result) & (right ^ result))) SET(OVERFLOW_FLAG, status_register);
 }
 
+static void shift(bool left, enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  CLEAR(CARRY_FLAG, &registers->status);
+  uint8_t *target = addressing_mode == ACCUMULATOR ? &registers->accumulator : &memory[get_operand_as_address(addressing_mode, registers, memory)];
+  if (BITN(left ? 7 : 0, *target)) SET(CARRY_FLAG, &registers->status);
+  if (left) *target <<= 1; else *target >>= 1;
+  set_NZ_flags(*target, &registers->status);
+}
+
 /* Add to Accumulator with Carry */
 static void ADC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
   uint8_t operand = get_operand_as_value(addressing_mode, registers, memory);
@@ -198,11 +206,7 @@ static void AND(enum addressing_mode addressing_mode, struct registers *register
 
 /* Shift Left One Bit */
 static void ASL(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  CLEAR(CARRY_FLAG, &registers->status);
-  uint8_t *target = addressing_mode == ACCUMULATOR ? &registers->accumulator : &memory[get_operand_as_address(addressing_mode, registers, memory)];
-  if (BITN(7, *target)) SET(CARRY_FLAG, &registers->status);
-  *target <<= 1;
-  set_NZ_flags(*target, &registers->status);
+  shift(true, addressing_mode, registers, memory);
 }
 
 static void branch_on_flag(bool set, int flag_bit, enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
@@ -385,7 +389,10 @@ static void LDY(enum addressing_mode addressing_mode, struct registers *register
   set_NZ_flags(registers->y, &registers->status);
 }
 
-static void LSR(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+/* Shift One Bit Right */
+static void LSR(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  shift(false, addressing_mode, registers, memory);
+}
 
 static void NOP(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 
