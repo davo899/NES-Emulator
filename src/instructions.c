@@ -426,8 +426,27 @@ static void PLP(enum addressing_mode addressing_mode, struct registers *register
   registers->status = pop_byte_from_stack(registers, memory) & 0b11001111;
 }
 
-static void ROL(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void ROR(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+/* Rotate One Bit Left */
+static void ROL(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  uint8_t *target = addressing_mode == ACCUMULATOR ? &registers->accumulator : &memory[get_operand_as_address(addressing_mode, registers, memory)];
+  bool carry = BITN(7, *target);
+  *target <<= 1;
+  *target |= registers->status & 0b00000001;
+  CLEAR(CARRY_FLAG, &registers->status);
+  if (carry) SET(CARRY_FLAG, &registers->status);
+  set_NZ_flags(*target, &registers->status);
+}
+
+static void ROR(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  uint8_t *target = addressing_mode == ACCUMULATOR ? &registers->accumulator : &memory[get_operand_as_address(addressing_mode, registers, memory)];
+  bool carry = BITN(0, *target);
+  *target >>= 1;
+  *target |= (registers->status & 0b00000001) << 7;
+  CLEAR(CARRY_FLAG, &registers->status);
+  if (carry) SET(CARRY_FLAG, &registers->status);
+  set_NZ_flags(*target, &registers->status);
+}
+
 static void RTI(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 static void RTS(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 
