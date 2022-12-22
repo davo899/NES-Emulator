@@ -136,9 +136,12 @@ void perform_instruction(uint8_t opcode, struct registers *registers, uint8_t *m
   instruction_table[opcode](get_addressing_mode(opcode), registers, memory);
 }
 
+static uint8_t pop_byte_from_stack(struct registers *registers, uint8_t *memory) {
+  return memory[0x100 + registers->stack_pointer++];
+}
+
 static void push_byte_to_stack(uint8_t byte, struct registers *registers, uint8_t *memory) {
-  registers->stack_pointer--;
-  memory[0x100 + registers->stack_pointer] = byte;
+  memory[0x100 + --registers->stack_pointer] = byte;
 }
 
 static void push_PC_plus_two(struct registers *registers, uint8_t *memory) {
@@ -394,14 +397,34 @@ static void LSR(enum addressing_mode addressing_mode, struct registers *register
   shift(false, addressing_mode, registers, memory);
 }
 
+/* No Operation */
 static void NOP(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 
-static void ORA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+/* OR with Accumulator */
+static void ORA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  registers->accumulator |= get_operand_as_value(addressing_mode, registers, memory);
+  set_NZ_flags(registers->accumulator, &registers->status);
+}
 
-static void PHA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void PHP(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void PLA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void PLP(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+/* Push Accumulator on Stack */
+static void PHA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  push_byte_to_stack(registers->accumulator, registers, memory);
+}
+
+/* Push Processor Status on Stack */
+static void PHP(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  push_byte_to_stack(registers->status | 0b00110000, registers, memory);
+}
+
+/* Pull Accumulator from Stack */
+static void PLA(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  registers->accumulator = pop_byte_from_stack(registers, memory);
+}
+
+/* Pull Processor Status from Stack */
+static void PLP(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  registers->status = pop_byte_from_stack(registers, memory) & 0b11001111;
+}
 
 static void ROL(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 static void ROR(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
