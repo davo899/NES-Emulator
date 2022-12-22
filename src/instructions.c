@@ -217,7 +217,14 @@ static void BEQ(enum addressing_mode addressing_mode, struct registers *register
   branch_on_flag(IS_SET, ZERO_FLAG, addressing_mode, registers, memory);
 }
 
-static void BIT(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+static void BIT(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  uint8_t operand = get_operand_as_value(addressing_mode, registers, memory);
+  registers->status &= 0b00111111;
+  registers->status |= operand & 0b11000000;
+
+  CLEAR(ZERO_FLAG, &registers->status);
+  if (!(registers->accumulator & operand)) SET(ZERO_FLAG, &registers->status);
+}
 
 /* Branch on Result Minus */
 static void BMI(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
