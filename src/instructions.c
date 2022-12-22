@@ -437,6 +437,7 @@ static void ROL(enum addressing_mode addressing_mode, struct registers *register
   set_NZ_flags(*target, &registers->status);
 }
 
+/* Rotate One Bit Right */
 static void ROR(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
   uint8_t *target = addressing_mode == ACCUMULATOR ? &registers->accumulator : &memory[get_operand_as_address(addressing_mode, registers, memory)];
   bool carry = BITN(0, *target);
@@ -447,8 +448,18 @@ static void ROR(enum addressing_mode addressing_mode, struct registers *register
   set_NZ_flags(*target, &registers->status);
 }
 
-static void RTI(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void RTS(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+/* Return from Interrupt */
+static void RTI(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  registers->status = pop_byte_from_stack(registers, memory) & 0b11001111;
+  uint8_t low_byte = pop_byte_from_stack(registers, memory);
+  registers->program_counter = concat_bytes(low_byte, pop_byte_from_stack(registers, memory));
+}
+
+/* Return from Subroutine */
+static void RTS(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  uint8_t low_byte = pop_byte_from_stack(registers, memory);
+  registers->program_counter = concat_bytes(low_byte, pop_byte_from_stack(registers, memory));
+}
 
 static void SBC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 

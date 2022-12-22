@@ -490,7 +490,7 @@ static void test_RTS() {
   cpu.memory[0x1FF] = 0xAD;
   cpu.memory[0x1FE] = 0x53;
   cpu.registers.stack_pointer = 0xFE;
-  perform_instruction(0x40, &cpu.registers, cpu.memory);
+  perform_instruction(0x60, &cpu.registers, cpu.memory);
   test_bytes_equal(cpu.registers.stack_pointer, 0);
   if (cpu.registers.program_counter != 0xAD53) fail("Incorrect PC value");
   free(cpu.memory);
