@@ -134,6 +134,7 @@ void (*instruction_table[256]) (enum addressing_mode addressing_mode, struct reg
 
 void perform_instruction(uint8_t opcode, struct registers *registers, uint8_t *memory) {
   instruction_table[opcode](get_addressing_mode(opcode), registers, memory);
+  registers->program_counter++;
 }
 
 static uint8_t pop_byte_from_stack(struct registers *registers, uint8_t *memory) {
@@ -263,7 +264,7 @@ static void BRK(enum addressing_mode addressing_mode, struct registers *register
   push_PC_plus_two(registers, memory);
   push_byte_to_stack(registers->status | ((uint8_t)1 << BREAK_FLAG), registers, memory);
   SET(INTR_DISABLE_FLAG, &registers->status);
-  registers->program_counter = concat_bytes(memory[0xFFFE], memory[0xFFFF]);
+  registers->program_counter = concat_bytes(memory[0xFFFE] - 1, memory[0xFFFF]);
 }
 
 /* Branch on Overflow Clear */
@@ -369,7 +370,7 @@ static void JMP(enum addressing_mode addressing_mode, struct registers *register
 /* Jump to New Location Saving Return Address */
 static void JSR(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
   push_PC_plus_two(registers, memory);
-  registers->program_counter = get_operand_as_address(addressing_mode, registers, memory);
+  JMP(addressing_mode, registers, memory);
 }
 
 /* Load Accumulator */
@@ -449,13 +450,12 @@ static void ROR(enum addressing_mode addressing_mode, struct registers *register
 /* Return from Interrupt */
 static void RTI(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
   registers->status = pop_byte_from_stack(registers, memory) & 0b11001111;
-  uint8_t low_byte = pop_byte_from_stack(registers, memory);
-  registers->program_counter = concat_bytes(low_byte, pop_byte_from_stack(registers, memory));
+  RTS(addressing_mode, registers, memory);
 }
 
 /* Return from Subroutine */
 static void RTS(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  uint8_t low_byte = pop_byte_from_stack(registers, memory);
+  uint8_t low_byte = pop_byte_from_stack(registers, memory) - 1;
   registers->program_counter = concat_bytes(low_byte, pop_byte_from_stack(registers, memory));
 }
 

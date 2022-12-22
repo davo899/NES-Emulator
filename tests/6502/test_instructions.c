@@ -208,12 +208,12 @@ static void test_flag_branch(uint8_t opcode, int flag, bool should_branch_when_s
   cpu.memory = calloc(2, 1);
   cpu.memory[1] = 10;
   perform_instruction(opcode, &cpu.registers, cpu.memory);
-  test_bytes_equal(cpu.registers.program_counter, should_branch_when_set ? 1 : 10);
+  test_bytes_equal(cpu.registers.program_counter, should_branch_when_set ? 2 : 11);
 
   cpu.registers.program_counter = 0;
   cpu.registers.status = (uint8_t)1 << flag;
   perform_instruction(opcode, &cpu.registers, cpu.memory);
-  test_bytes_equal(cpu.registers.program_counter, should_branch_when_set ? 10 : 1);
+  test_bytes_equal(cpu.registers.program_counter, should_branch_when_set ? 11 : 2);
 
   free(cpu.memory);
 }
@@ -356,7 +356,7 @@ static void test_JMP() {
   cpu.memory[1] = 0x9F;
   cpu.memory[2] = 0x8C;
   perform_instruction(0x4C, &cpu.registers, cpu.memory);
-  if (cpu.registers.program_counter != 0x8C9E) fail("Incorrect PC value");
+  if (cpu.registers.program_counter != 0x8C9F) fail("Incorrect PC value");
   free(cpu.memory);
 }
 
@@ -395,7 +395,10 @@ static void test_LSR() {
   test_bytes_equal(cpu.registers.status, 0b00000011);
 }
 
-static void test_NOP() { perform_instruction(0xEA, NULL, NULL); }
+static void test_NOP() {
+  struct registers registers = blank_registers;
+  perform_instruction(0xEA, &registers, NULL);
+}
 
 static void test_ORA() {
   struct cpu cpu = blank_cpu;
