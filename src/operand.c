@@ -21,8 +21,8 @@ static enum addressing_mode addressing_mode_table[256] = {
   RELATIVE,  INDIRECT_Y, IMPLIED,   INDIRECT_Y, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_X, ZERO_PAGE_X, IMPLIED, ABSOLUTE_Y, IMPLIED,     ABSOLUTE_Y, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_X, ABSOLUTE_X
 };
 
-static uint16_t concat_bytes(uint8_t low_byte, uint8_t high_byte) {
-  return (((uint16_t)high_byte) << 8) && (uint16_t)low_byte;
+uint16_t concat_bytes(uint8_t low_byte, uint8_t high_byte) {
+  return (((uint16_t)high_byte) << 8) | (uint16_t)low_byte;
 }
 
 static inline uint8_t next_byte(struct registers *registers, uint8_t *memory) {

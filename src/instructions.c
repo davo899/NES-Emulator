@@ -136,6 +136,11 @@ void perform_instruction(uint8_t opcode, struct registers *registers, uint8_t *m
   instruction_table[opcode](get_addressing_mode(opcode), registers, memory);
 }
 
+static void push_byte_to_stack(uint8_t byte, struct registers *registers, uint8_t *memory) {
+  registers->stack_pointer--;
+  memory[0x100 + registers->stack_pointer] = byte;
+}
+
 static void set_NZ_flags(int8_t value, uint8_t *status_register) {
   CLEAR(ZERO_FLAG, status_register);
   CLEAR(NEGATIVE_FLAG, status_register);
@@ -217,6 +222,7 @@ static void BEQ(enum addressing_mode addressing_mode, struct registers *register
   branch_on_flag(IS_SET, ZERO_FLAG, addressing_mode, registers, memory);
 }
 
+/* Test Bits in Memory with Accumulator */
 static void BIT(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
   uint8_t operand = get_operand_as_value(addressing_mode, registers, memory);
   registers->status &= 0b00111111;
@@ -241,7 +247,15 @@ static void BPL(enum addressing_mode addressing_mode, struct registers *register
   branch_on_flag(IS_CLEAR, NEGATIVE_FLAG, addressing_mode, registers, memory);
 }
 
-static void BRK(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+/* Force Break */
+static void BRK(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  registers->program_counter += 2;
+  push_byte_to_stack(registers->program_counter >> 8, registers, memory);
+  push_byte_to_stack(registers->program_counter & 0xFF, registers, memory);
+  push_byte_to_stack(registers->status | ((uint8_t)1 << BREAK_FLAG), registers, memory);
+  SET(INTR_DISABLE_FLAG, &registers->status);
+  registers->program_counter = concat_bytes(memory[0xFFFE], memory[0xFFFF]);
+}
 
 /* Branch on Overflow Clear */
 static void BVC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
