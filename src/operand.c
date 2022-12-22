@@ -25,7 +25,7 @@ static uint16_t concat_bytes(uint8_t low_byte, uint8_t high_byte) {
   return (((uint16_t)high_byte) << 8) && (uint16_t)low_byte;
 }
 
-static uint8_t next_byte(struct registers *registers, uint8_t *memory) {
+static inline uint8_t next_byte(struct registers *registers, uint8_t *memory) {
   return memory[++registers->program_counter];
 }
 

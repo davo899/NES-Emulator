@@ -3,6 +3,8 @@
 #include <stdbool.h>
 
 #define BYTE_MAX 0xFF
+#define IS_SET true
+#define IS_CLEAR false
 
 // Instructions
 static void ADC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory);
@@ -192,16 +194,57 @@ static void ASL(enum addressing_mode addressing_mode, struct registers *register
   set_NZ_flags(*target, &registers->status);
 }
 
-static void BCC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void BCS(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void BEQ(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+static void branch_on_flag(bool set, int flag_bit, enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  bool flag_set = BITN(flag_bit, registers->status);
+  if ((flag_set && set) || (!flag_set && !set))
+    registers->program_counter = get_operand_as_address(addressing_mode, registers, memory);
+  else
+    registers->program_counter++;
+}
+
+/* Branch on Carry Clear */
+static void BCC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  branch_on_flag(IS_CLEAR, CARRY_FLAG, addressing_mode, registers, memory);
+}
+
+/* Branch on Carry Set */
+static void BCS(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  branch_on_flag(IS_SET, CARRY_FLAG, addressing_mode, registers, memory);
+}
+
+/* Branch on Result Zero */
+static void BEQ(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  branch_on_flag(IS_SET, ZERO_FLAG, addressing_mode, registers, memory);
+}
+
 static void BIT(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void BMI(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void BNE(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void BPL(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+
+/* Branch on Result Minus */
+static void BMI(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  branch_on_flag(IS_SET, NEGATIVE_FLAG, addressing_mode, registers, memory);
+}
+
+/* Branch on Result not Zero */
+static void BNE(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  branch_on_flag(IS_CLEAR, ZERO_FLAG, addressing_mode, registers, memory);
+}
+
+/* Branch on Result Plus */
+static void BPL(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  branch_on_flag(IS_CLEAR, NEGATIVE_FLAG, addressing_mode, registers, memory);
+}
+
 static void BRK(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void BVC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void BVS(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+
+/* Branch on Overflow Clear */
+static void BVC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  branch_on_flag(IS_CLEAR, OVERFLOW_FLAG, addressing_mode, registers, memory);
+}
+
+/* Branch on Overflow Set */
+static void BVS(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  branch_on_flag(IS_SET, OVERFLOW_FLAG, addressing_mode, registers, memory);
+}
 
 /* Clear Carry Flag */
 static void CLC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {

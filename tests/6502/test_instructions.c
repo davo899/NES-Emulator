@@ -208,12 +208,12 @@ static void test_flag_branch(uint8_t opcode, int flag, bool should_branch_when_s
   cpu.memory = calloc(2, 1);
   cpu.memory[1] = 10;
   perform_instruction(opcode, &cpu.registers, cpu.memory);
-  test_bytes_equal(cpu.registers.program_counter, should_branch_when_set ? 1 : 11);
+  test_bytes_equal(cpu.registers.program_counter, should_branch_when_set ? 1 : 10);
 
   cpu.registers.program_counter = 0;
   cpu.registers.status = (uint8_t)1 << flag;
   perform_instruction(opcode, &cpu.registers, cpu.memory);
-  test_bytes_equal(cpu.registers.program_counter, should_branch_when_set ? 11 : 1);
+  test_bytes_equal(cpu.registers.program_counter, should_branch_when_set ? 10 : 1);
 
   free(cpu.memory);
 }
