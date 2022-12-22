@@ -356,7 +356,7 @@ static void test_JMP() {
   cpu.memory[1] = 0x9F;
   cpu.memory[2] = 0x8C;
   perform_instruction(0x4C, &cpu.registers, cpu.memory);
-  if (cpu.registers.program_counter != 0x8C9F) fail("Incorrect PC value");
+  if (cpu.registers.program_counter != 0x8C9E) fail("Incorrect PC value");
   free(cpu.memory);
 }
 

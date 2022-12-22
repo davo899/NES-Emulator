@@ -363,7 +363,7 @@ static void INY(enum addressing_mode addressing_mode, struct registers *register
 
 /* Jump to New Location */
 static void JMP(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  registers->program_counter = get_operand_as_address(addressing_mode, registers, memory);
+  registers->program_counter = get_operand_as_address(addressing_mode, registers, memory) - 1;
 }
 
 /* Jump to New Location Saving Return Address */
