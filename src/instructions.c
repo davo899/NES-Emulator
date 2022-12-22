@@ -287,28 +287,34 @@ static void CLV(enum addressing_mode addressing_mode, struct registers *register
   CLEAR(OVERFLOW_FLAG, &registers->status);
 }
 
-// C = A >= M
-// Z = A == M
-// N = A > M
-/* Compare with Accumulator */
-static void CMP(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  uint8_t operand = get_operand_as_value(addressing_mode, registers, memory);
-
+static void compare(uint8_t left, uint8_t right, struct registers *registers) {
   CLEAR(CARRY_FLAG, &registers->status);
   CLEAR(NEGATIVE_FLAG, &registers->status);
   CLEAR(ZERO_FLAG, &registers->status);
 
-  if (registers->accumulator == operand) {
+  if (left == right) {
     SET(ZERO_FLAG, &registers->status);
     SET(CARRY_FLAG, &registers->status);
   } else {
-    if (registers->accumulator > operand) SET(CARRY_FLAG, &registers->status);
-    if (BITN(7, registers->accumulator - operand)) SET(NEGATIVE_FLAG, &registers->status);
+    if (left > right) SET(CARRY_FLAG, &registers->status);
+    if (BITN(7, left - right)) SET(NEGATIVE_FLAG, &registers->status);
   }
 }
 
-static void CPX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void CPY(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+/* Compare with Accumulator */
+static void CMP(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  compare(registers->accumulator, get_operand_as_value(addressing_mode, registers, memory), registers);
+}
+
+/* Compare with Index X */
+static void CPX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  compare(registers->x, get_operand_as_value(addressing_mode, registers, memory), registers);
+}
+
+/* Compare with Index Y */
+static void CPY(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  compare(registers->y, get_operand_as_value(addressing_mode, registers, memory), registers);
+}
 
 static void DEC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 static void DEX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
