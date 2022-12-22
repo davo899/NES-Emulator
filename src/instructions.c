@@ -316,9 +316,20 @@ static void CPY(enum addressing_mode addressing_mode, struct registers *register
   compare(registers->y, get_operand_as_value(addressing_mode, registers, memory), registers);
 }
 
-static void DEC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void DEX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
-static void DEY(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
+/* Decrement Memory by One */
+static void DEC(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  memory[get_operand_as_address(addressing_mode, registers, memory)]--;
+}
+
+/* Decrement Index X by One */
+static void DEX(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  registers->x--;
+}
+
+/* Decrement Index Y by One */
+static void DEY(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+  registers->y--;
+}
 
 static void EOR(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {}
 
