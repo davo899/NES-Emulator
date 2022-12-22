@@ -214,7 +214,7 @@ static void ASL(enum addressing_mode addressing_mode, struct registers *register
 static void branch_on_flag(bool set, int flag_bit, enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
   bool flag_set = BITN(flag_bit, registers->status);
   if ((flag_set && set) || (!flag_set && !set))
-    registers->program_counter = get_operand_as_address(addressing_mode, registers, memory);
+    registers->program_counter = get_operand_as_address(addressing_mode, registers, memory) + 1;
   else
     registers->program_counter++;
 }
