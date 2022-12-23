@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include "memory.h"
 
 #define BITN(N, X)   (((X) >> (N)) & (uint8_t)1)
 #define SET(N, X)    (*X |= ((uint8_t)1 << N))
@@ -14,18 +15,14 @@
 #define ZERO_FLAG 1
 #define CARRY_FLAG 0
 
-struct registers {
+struct cpu {
   uint8_t accumulator;
   uint8_t x;
   uint8_t y;
   uint8_t status;
   uint8_t stack_pointer;
   uint16_t program_counter;
-};
-
-struct cpu {
-  struct registers registers;
-  uint8_t *memory;
+  struct memory_mapping memory;
 };
 
 void step_cpu(struct cpu *cpu);

@@ -25,45 +25,45 @@ uint16_t concat_bytes(uint8_t low_byte, uint8_t high_byte) {
   return (((uint16_t)high_byte) << 8) | (uint16_t)low_byte;
 }
 
-static inline uint8_t next_byte(struct registers *registers, uint8_t *memory) {
-  return memory[++registers->program_counter];
+static inline uint8_t next_byte(struct cpu *cpu) {
+  return cpu->memory.read(++cpu->program_counter);
 }
 
-static uint16_t absolute(struct registers *registers, uint8_t *memory) {
-  uint8_t low_byte = next_byte(registers, memory);
-  return concat_bytes(low_byte, next_byte(registers, memory));
+static uint16_t absolute(struct cpu *cpu) {
+  uint8_t low_byte = next_byte(cpu);
+  return concat_bytes(low_byte, next_byte(cpu));
 }
 
 enum addressing_mode get_addressing_mode(uint8_t opcode) {
   return addressing_mode_table[opcode];
 }
 
-static uint16_t get_operand(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
+static uint16_t get_operand(enum addressing_mode addressing_mode, struct cpu *cpu) {
   uint8_t address;
   switch (addressing_mode) {
     case IMMEDIATE:
     case ZERO_PAGE:
-      return next_byte(registers, memory);
+      return next_byte(cpu);
     case RELATIVE:
-      return registers->program_counter + (int8_t)next_byte(registers, memory);
+      return cpu->program_counter + (int8_t)next_byte(cpu);
     case ABSOLUTE:
-      return absolute(registers, memory);
+      return absolute(cpu);
     case ABSOLUTE_X:
-      return absolute(registers, memory) + registers->x;
+      return absolute(cpu) + cpu->x;
     case ABSOLUTE_Y:
-      return absolute(registers, memory) + registers->y;
+      return absolute(cpu) + cpu->y;
     case INDIRECT:
-      return memory[absolute(registers, memory)];
+      return cpu->memory.read(absolute(cpu));
     case X_INDIRECT:
-      address = next_byte(registers, memory) + registers->x;
-      return concat_bytes(memory[(uint16_t)address], memory[(uint16_t)(address + 1)]);
+      address = next_byte(cpu) + cpu->x;
+      return concat_bytes(cpu->memory.read((uint16_t)address), cpu->memory.read((uint16_t)(address + 1)));
     case INDIRECT_Y:
-      address = next_byte(registers, memory);
-      return concat_bytes(memory[(uint16_t)address], memory[(uint16_t)(address + 1)]) + registers->y;
+      address = next_byte(cpu);
+      return concat_bytes(cpu->memory.read((uint16_t)address), cpu->memory.read((uint16_t)(address + 1))) + cpu->y;
     case ZERO_PAGE_X:
-      return next_byte(registers, memory) + registers->x;
+      return next_byte(cpu) + cpu->x;
     case ZERO_PAGE_Y:
-      return next_byte(registers, memory) + registers->y;
+      return next_byte(cpu) + cpu->y;
 
     case IMPLIED:
     case ACCUMULATOR:
@@ -73,11 +73,11 @@ static uint16_t get_operand(enum addressing_mode addressing_mode, struct registe
   }
 }
 
-uint16_t get_operand_as_address(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  return get_operand(addressing_mode, registers, memory);
+uint16_t get_operand_as_address(enum addressing_mode addressing_mode, struct cpu *cpu) {
+  return get_operand(addressing_mode, cpu);
 }
 
-uint8_t get_operand_as_value(enum addressing_mode addressing_mode, struct registers *registers, uint8_t *memory) {
-  uint16_t operand = get_operand(addressing_mode, registers, memory);
-  return addressing_mode == IMMEDIATE ? (uint8_t)operand : memory[operand];
+uint8_t get_operand_as_value(enum addressing_mode addressing_mode, struct cpu *cpu) {
+  uint16_t operand = get_operand(addressing_mode, cpu);
+  return addressing_mode == IMMEDIATE ? (uint8_t)operand : cpu->memory.read(operand);
 }
