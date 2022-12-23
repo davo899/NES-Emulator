@@ -5,7 +5,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+struct cpu cpu;
+
+static uint8_t read(uint16_t address) {
+  return cpu.memory.memory[address];
+}
+
+static void write(uint8_t value, uint16_t address) {
+  cpu.memory.memory[address] = value;
+}
+
 static void test_cpu() {
+  cpu.memory.read = &read;
+  cpu.memory.write = &write;
+
   uint8_t test_program[] = {
     0xA9, 0x00,       // 0:LDA #0
     0xA6, 0x34,       // 2:LDX 0x34
@@ -19,17 +32,12 @@ static void test_cpu() {
     0x4C, 0x12, 0x00  //12:JMP 12
   };
 
-  struct cpu *cpu = calloc(1, sizeof(struct cpu));
-  cpu->memory = calloc(0x10000, 1);
-  cpu->memory[0x33] = 24;
-  cpu->memory[0x34] = 7;
-  load_program_at(0, test_program, 0x15, cpu);
-  while(cpu->registers.program_counter != 0x12) step_cpu(cpu);
+  cpu.memory.memory[0x33] = 24;
+  cpu.memory.memory[0x34] = 7;
+  load_program_at(0, test_program, 0x15, &cpu);
+  while(cpu.program_counter != 0x12) step_cpu(&cpu);
 
-  test_bytes_equal(cpu->memory[0x2833], 168);
-  free(cpu->memory);
-  free(cpu);
-
+  test_bytes_equal(cpu.memory.memory[0x2833], 168);
   printf("Test program passed.\n");
 }
 
