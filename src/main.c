@@ -26,11 +26,11 @@ static void NES_write(uint8_t data, uint16_t address) {
 }
 
 int main(int argc, char *argv[]) {
-  cpu = calloc(1, sizeof(struct cpu));
-  ppu = calloc(1, sizeof(struct ppu));
-  apu = calloc(1, sizeof(struct apu));
-  ram = calloc(2048, 1);
-  rom = calloc(0xBFE0, 1);
+  cpu = calloc(1, sizeof(struct cpu)); check_OOM(cpu);
+  ppu = calloc(1, sizeof(struct ppu)); check_OOM(ppu);
+  apu = calloc(1, sizeof(struct apu)); check_OOM(apu);
+  ram = calloc(2048, 1); check_OOM(ram);
+  rom = calloc(0xBFE0, 1); check_OOM(rom);
 
   cpu->memory.read = &NES_read;
   cpu->memory.write = &NES_write;
