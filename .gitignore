@@ -5,3 +5,4 @@ tests/test.exe
 main.exe
 SDL/
 SDL2.dll
+Makefile
