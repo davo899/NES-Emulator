@@ -2,3 +2,6 @@
 src/build/
 tests/build/
 tests/test.exe
+main.exe
+SDL/
+SDL2.dll
