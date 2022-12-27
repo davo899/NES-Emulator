@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "error.h"
+#include "rom_loader.h"
 #include "cpu.h"
 #include "ppu.h"
 #include "apu.h"
@@ -26,11 +27,13 @@ static void NES_write(uint8_t data, uint16_t address) {
 }
 
 int main(int argc, char *argv[]) {
+  if (argc != 2) error("Incorrect number of arguments: nes <rom_path>");
+  
   cpu = calloc(1, sizeof(struct cpu)); check_OOM(cpu);
   ppu = calloc(1, sizeof(struct ppu)); check_OOM(ppu);
   apu = calloc(1, sizeof(struct apu)); check_OOM(apu);
   ram = calloc(2048, 1); check_OOM(ram);
-  rom = calloc(0xBFE0, 1); check_OOM(rom);
+  rom = load_rom(argv[1]);
 
   cpu->memory.read = &NES_read;
   cpu->memory.write = &NES_write;
