@@ -2,7 +2,7 @@
 src/build/
 tests/build/
 tests/test.exe
-main.exe
+nes.exe
 SDL/
 SDL2.dll
 Makefile

@@ -1,6 +1,7 @@
 #include "rom_loader.h"
 #include "error.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 const uint8_t header_validation[4] = {0x4E, 0x45, 0x53, 0x1A};
 
@@ -19,7 +20,7 @@ uint8_t *load_rom(char *path) {
   if (flags_6 & 0b00000100) fread(trainer, 1, 512, file);
   
   uint8_t *rom = calloc(0xBFE0, 1); check_OOM(rom);
-  uint8_t head = rom;
+  uint8_t *head = rom;
   for (int i = 0; i < prg_rom_size; i++) {
     fread(head, 1, 16384, file);
     head += 16384;
