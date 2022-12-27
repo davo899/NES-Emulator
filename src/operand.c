@@ -1,4 +1,5 @@
 #include "operand.h"
+#include "error.h"
 
 #define ADDRESSING_MASK (0b11100)
 
@@ -67,9 +68,9 @@ static uint16_t get_operand(enum addressing_mode addressing_mode, struct cpu *cp
 
     case IMPLIED:
     case ACCUMULATOR:
-      panic("Attempted to get operand on implied addressing mode");
+      error("Attempted to get operand on implied addressing mode");
     default:
-      panic("Unlisted addressing mode taken from opcode");
+      error("Unlisted addressing mode taken from opcode");
   }
 }
 

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "error.h"
 #include "cpu.h"
 #include "ppu.h"
 #include "apu.h"
@@ -21,7 +22,7 @@ static void NES_write(uint8_t data, uint16_t address) {
   if      (address < 0x2000) ram[address & 0b0000011111111111] = data;
   else if (address < 0x4000) ppu_write(ppu, address & 0b0000000000000111, data);
   else if (address < 0x4014) apu_write(apu, address & 0b0000000000001111, data);
-  else                       panic("Attempted to write to ROM");
+  else                       error("Attempted to write to ROM");
 }
 
 int main(int argc, char *argv[]) {
