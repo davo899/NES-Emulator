@@ -5,7 +5,7 @@
 
 const uint8_t header_validation[4] = {0x4E, 0x45, 0x53, 0x1A};
 
-uint8_t *load_rom(char *path) {
+void load_rom(char *path, uint8_t *prg_rom, uint8_t *chr_rom) {
   FILE *file = fopen(path, "rb");
   if (file == NULL) error("ROM file not found or could not be opened");
 
@@ -19,17 +19,17 @@ uint8_t *load_rom(char *path) {
   uint8_t trainer[512];
   if (flags_6 & 0b00000100) fread(trainer, 1, 512, file);
   
-  uint8_t *rom = calloc(0xBFE0, 1); check_OOM(rom);
-  uint8_t *head = rom;
+  uint8_t *head = prg_rom;
   for (int i = 0; i < prg_rom_size; i++) {
     fread(head, 1, 16384, file);
     head += 16384;
   }
+
+  head = chr_rom;
   for (int i = 0; i < chr_rom_size; i++) {
     fread(head, 1, 8192, file);
     head += 8192;
   }
 
   fclose(file);
-  return rom;
 }

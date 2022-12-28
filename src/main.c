@@ -32,7 +32,8 @@ int main(int argc, char *argv[]) {
   ppu = calloc(1, sizeof(struct ppu)); check_OOM(ppu);
   apu = calloc(1, sizeof(struct apu)); check_OOM(apu);
   ram = calloc(2048, 1); check_OOM(ram);
-  rom = load_rom(argv[1]);
+  rom = calloc(0x7FFF, 1); check_OOM(rom);
+  load_rom(argv[1], rom, ppu->chr_rom);
 
   cpu->memory.read = &NES_read;
   cpu->memory.write = &NES_write;

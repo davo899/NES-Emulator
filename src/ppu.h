@@ -4,6 +4,7 @@
 
 struct ppu {
   uint8_t oam[256];
+  uint8_t chr_rom[8192];
   uint8_t *vram;
 };
 
