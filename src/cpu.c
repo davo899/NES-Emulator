@@ -4,7 +4,10 @@
 #include <stdlib.h>
 
 void step_cpu(struct cpu *cpu) {
-  perform_instruction(cpu->memory.read(cpu->program_counter), cpu);
+  if (cpu->instruction_cycles_remaining == 0)
+    perform_instruction(cpu->memory.read(cpu->program_counter), cpu);
+  else
+    cpu->instruction_cycles_remaining--;
 }
 
 void load_program_at(uint16_t offset, uint8_t program[], int size, struct cpu *cpu) {

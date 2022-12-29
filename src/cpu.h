@@ -22,6 +22,7 @@ struct cpu {
   uint8_t status;
   uint8_t stack_pointer;
   uint16_t program_counter;
+  int instruction_cycles_remaining;
   struct memory_mapping memory;
 };
 

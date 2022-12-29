@@ -108,6 +108,35 @@ static void TAS(enum addressing_mode addressing_mode, struct cpu *cpu);
 //Unsafe SBC
 static void UBC(enum addressing_mode addressing_mode, struct cpu *cpu);
 
+uint8_t page_boundary_check[] = {
+  0x7D, 0x3D, 0xDD, 0x5D, 0xBD, 0x1D, 0xFD,
+  0x79, 0x39, 0xD9, 0x59, 0xB9, 0x19, 0xF9,
+  0x71, 0x31, 0xD1, 0x51, 0xB1, 0x11, 0xF1,
+  0x70, 0x30, 0xD0, 0x50, 0xB0, 0x10, 0xF0,
+  0xBC, 0xBE, 0x90
+};
+
+int cycles_table[256] = {
+  7, 6, 0, 0, 0, 3, 5, 0, 3, 2, 2, 0, 0, 4, 6, 0,
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,
+  6, 6, 0, 0, 3, 3, 5, 0, 4, 2, 2, 0, 4, 4, 6, 0,
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,
+
+  6, 6, 0, 0, 0, 3, 5, 0, 3, 2, 2, 0, 3, 4, 6, 0,
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,
+  6, 6, 0, 0, 0, 3, 5, 0, 4, 2, 2, 0, 5, 4, 6, 0,
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,
+
+  0, 6, 0, 0, 3, 3, 3, 0, 2, 0, 2, 0, 4, 4, 4, 0,
+  2, 6, 0, 0, 4, 4, 4, 0, 2, 5, 2, 0, 0, 5, 0, 0,
+  2, 6, 2, 0, 3, 3, 3, 0, 2, 2, 2, 0, 4, 4, 4, 0,
+  2, 5, 0, 0, 4, 4, 4, 0, 2, 4, 2, 0, 4, 4, 4, 0,
+
+  2, 6, 0, 0, 3, 3, 5, 0, 2, 2, 2, 0, 4, 4, 6, 0,
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,
+  2, 6, 0, 0, 3, 3, 5, 0, 2, 2, 2, 0, 4, 4, 6, 0,
+  2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0
+};
 
 void (*instruction_table[256]) (enum addressing_mode addressing_mode, struct cpu *cpu) = {
   &BRK, &ORA, &JAM, &SLO, &NOP, &ORA, &ASL, &SLO, &PHP, &ORA, &ASL, &ANC, &NOP, &ORA, &ASL, &SLO,
@@ -132,6 +161,7 @@ void (*instruction_table[256]) (enum addressing_mode addressing_mode, struct cpu
 };
 
 void perform_instruction(uint8_t opcode, struct cpu *cpu) {
+  cpu->instruction_cycles_remaining += cycles_table[opcode];
   instruction_table[opcode](get_addressing_mode(opcode), cpu);
   cpu->program_counter++;
 }
@@ -274,7 +304,10 @@ static void ROR(enum addressing_mode addressing_mode, struct cpu *cpu) {
 static void branch_on_flag(bool set, int flag_bit, enum addressing_mode addressing_mode, struct cpu *cpu) {
   bool flag_set = BITN(flag_bit, cpu->status);
   if ((flag_set && set) || (!flag_set && !set))
+  {
     cpu->program_counter = get_operand_as_address(addressing_mode, cpu) + 1;
+    cpu->instruction_cycles_remaining++;
+  }
   else
     cpu->program_counter++;
 }
