@@ -2,10 +2,17 @@
 #include "instructions.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 void step_cpu(struct cpu *cpu) {
   if (cpu->instruction_cycles_remaining == 0)
-    perform_instruction(cpu->memory.read(cpu->program_counter), cpu);
+    if (cpu->working) {
+      perform_instruction(cpu->memory.read(cpu->program_counter), cpu);
+      cpu->working = false;
+    } else {
+      wait_instruction(cpu->memory.read(cpu->program_counter), cpu);
+      cpu->working = true;
+    }
   else
     cpu->instruction_cycles_remaining--;
 }

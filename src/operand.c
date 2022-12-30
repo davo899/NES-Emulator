@@ -1,5 +1,7 @@
 #include "operand.h"
 #include "error.h"
+#include <stdlib.h>
+#include <stdio.h>
 
 #define ADDRESSING_MASK (0b11100)
 
@@ -72,6 +74,54 @@ static uint16_t get_operand(enum addressing_mode addressing_mode, struct cpu *cp
     default:
       error("Unlisted addressing mode taken from opcode");
   }
+}
+
+char *disassemble_operand(struct cpu *cpu) {
+  enum addressing_mode addressing_mode = get_addressing_mode(cpu->memory.read(cpu->program_counter));
+
+  char *text = malloc(10 * sizeof(char));
+  switch (addressing_mode) {
+    case IMMEDIATE:
+      sprintf(text, "#%02x", cpu->memory.read(cpu->program_counter + 1));
+      break;
+    case ZERO_PAGE:
+      sprintf(text, "$%02x", cpu->memory.read(cpu->program_counter + 1));
+      break;
+    case RELATIVE:
+      sprintf(text, ">%02x", cpu->program_counter + (int8_t)cpu->memory.read(cpu->program_counter + 1));
+      break;
+    case ABSOLUTE:
+      sprintf(text, "$%02x%02x", cpu->memory.read(cpu->program_counter + 2), cpu->memory.read(cpu->program_counter + 1));
+      break;
+    case ABSOLUTE_X:
+      sprintf(text, "$%02x%02x, X", cpu->memory.read(cpu->program_counter + 2), cpu->memory.read(cpu->program_counter + 1));
+      break;
+    case ABSOLUTE_Y:
+      sprintf(text, "$%02x%02x, Y", cpu->memory.read(cpu->program_counter + 2), cpu->memory.read(cpu->program_counter + 1));
+      break;
+    case INDIRECT:
+      sprintf(text, "(%02x%02x)", cpu->memory.read(cpu->program_counter + 2), cpu->memory.read(cpu->program_counter + 1));
+      break;
+    case X_INDIRECT:
+      sprintf(text, "(%02x%02x, X)", cpu->memory.read(cpu->program_counter + 2), cpu->memory.read(cpu->program_counter + 1));
+      break;
+    case INDIRECT_Y:
+      sprintf(text, "(%02x%02x), Y", cpu->memory.read(cpu->program_counter + 2), cpu->memory.read(cpu->program_counter + 1));
+      break;
+    case ZERO_PAGE_X:
+      sprintf(text, "$%02x, X", cpu->memory.read(cpu->program_counter + 1));
+      break;
+    case ZERO_PAGE_Y:
+      sprintf(text, "$%02x, Y", cpu->memory.read(cpu->program_counter + 1));
+      break;
+
+    case ACCUMULATOR:
+      return "A";
+    case IMPLIED:
+    default:
+      return "";
+  }
+  return text;
 }
 
 uint16_t get_operand_as_address(enum addressing_mode addressing_mode, struct cpu *cpu) {

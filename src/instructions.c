@@ -108,6 +108,28 @@ static void TAS(enum addressing_mode addressing_mode, struct cpu *cpu);
 //Unsafe SBC
 static void UBC(enum addressing_mode addressing_mode, struct cpu *cpu);
 
+char disassembly_table[256][4] = {
+  "BRK", "ORA", "JAM", "SLO", "NOP", "ORA", "ASL", "SLO", "PHP", "ORA", "ASL", "ANC", "NOP", "ORA", "ASL", "SLO",
+  "BPL", "ORA", "JAM", "SLO", "NOP", "ORA", "ASL", "SLO", "CLC", "ORA", "NOP", "SLO", "NOP", "ORA", "ASL", "SLO",
+  "JSR", "AND", "JAM", "RLA", "BIT", "AND", "ROL", "RLA", "PLP", "AND", "ROL", "ANC", "BIT", "AND", "ROL", "RLA",
+  "BMI", "AND", "JAM", "RLA", "NOP", "AND", "ROL", "RLA", "SEC", "AND", "NOP", "RLA", "NOP", "AND", "ROL", "RLA",
+
+  "RTI", "EOR", "JAM", "SRE", "NOP", "EOR", "LSR", "SRE", "PHA", "EOR", "LSR", "ALR", "JMP", "EOR", "LSR", "SRE",
+  "BVC", "EOR", "JAM", "SRE", "NOP", "EOR", "LSR", "SRE", "CLI", "EOR", "NOP", "SRE", "NOP", "EOR", "LSR", "SRE",
+  "RTS", "ADC", "JAM", "RRA", "NOP", "ADC", "ROR", "RRA", "PLA", "ADC", "ROR", "ARR", "JMP", "ADC", "ROR", "RRA",
+  "BVS", "ADC", "JAM", "RRA", "NOP", "ADC", "ROR", "RRA", "SEI", "ADC", "NOP", "RRA", "NOP", "ADC", "ROR", "RRA",
+
+  "NOP", "STA", "NOP", "SAX", "STY", "STA", "STX", "SAX", "DEY", "NOP", "TXA", "ANE", "STY", "STA", "STX", "SAX",
+  "BCC", "STA", "JAM", "SHA", "STY", "STA", "STX", "SAX", "TYA", "STA", "TXS", "TAS", "SHY", "STA", "SHX", "SHA",
+  "LDY", "LDA", "LDX", "LAX", "LDY", "LDA", "LDX", "LAX", "TAY", "LDA", "TAX", "LXA", "LDY", "LDA", "LDX", "LAX",
+  "BCS", "LDA", "JAM", "LAX", "LDY", "LDA", "LDX", "LAX", "CLV", "LDA", "TSX", "LAS", "LDY", "LDA", "LDX", "LAX",
+
+  "CPY", "CMP", "NOP", "DCP", "CPY", "CMP", "DEC", "DCP", "INY", "CMP", "DEX", "SBX", "CPY", "CMP", "DEC", "DCP",
+  "BNE", "CMP", "JAM", "DCP", "NOP", "CMP", "DEC", "DCP", "CLD", "CMP", "NOP", "DCP", "NOP", "CMP", "DEC", "DCP",
+  "CPX", "SBC", "NOP", "ISC", "CPX", "SBC", "INC", "ISC", "INX", "SBC", "NOP", "UBC", "CPX", "SBC", "INC", "ISC",
+  "BEQ", "SBC", "JAM", "ISC", "NOP", "SBC", "INC", "ISC", "SED", "SBC", "NOP", "ISC", "NOP", "SBC", "INC", "ISC"
+};
+
 uint8_t page_boundary_check[] = {
   0x7D, 0x3D, 0xDD, 0x5D, 0xBD, 0x1D, 0xFD,
   0x79, 0x39, 0xD9, 0x59, 0xB9, 0x19, 0xF9,
@@ -138,6 +160,11 @@ int cycles_table[256] = {
   2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0
 };
 
+void wait_instruction(uint8_t opcode, struct cpu *cpu) {
+  cpu->instruction_cycles_remaining += cycles_table[opcode];
+  cpu->working = true;
+}
+
 void (*instruction_table[256]) (enum addressing_mode addressing_mode, struct cpu *cpu) = {
   &BRK, &ORA, &JAM, &SLO, &NOP, &ORA, &ASL, &SLO, &PHP, &ORA, &ASL, &ANC, &NOP, &ORA, &ASL, &SLO,
   &BPL, &ORA, &JAM, &SLO, &NOP, &ORA, &ASL, &SLO, &CLC, &ORA, &NOP, &SLO, &NOP, &ORA, &ASL, &SLO,
@@ -161,9 +188,12 @@ void (*instruction_table[256]) (enum addressing_mode addressing_mode, struct cpu
 };
 
 void perform_instruction(uint8_t opcode, struct cpu *cpu) {
-  cpu->instruction_cycles_remaining += cycles_table[opcode];
   instruction_table[opcode](get_addressing_mode(opcode), cpu);
   cpu->program_counter++;
+}
+
+char *get_current_instruction_name(struct cpu *cpu) {
+  return disassembly_table[cpu->memory.read(cpu->program_counter)];
 }
 
 static inline uint8_t pop_byte_from_stack(struct cpu *cpu) {
@@ -304,10 +334,7 @@ static void ROR(enum addressing_mode addressing_mode, struct cpu *cpu) {
 static void branch_on_flag(bool set, int flag_bit, enum addressing_mode addressing_mode, struct cpu *cpu) {
   bool flag_set = BITN(flag_bit, cpu->status);
   if ((flag_set && set) || (!flag_set && !set))
-  {
     cpu->program_counter = get_operand_as_address(addressing_mode, cpu) + 1;
-    cpu->instruction_cycles_remaining++;
-  }
   else
     cpu->program_counter++;
 }

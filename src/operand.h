@@ -14,3 +14,4 @@ enum addressing_mode get_addressing_mode(uint8_t opcode);
 uint16_t get_operand_as_address(enum addressing_mode addressing_mode, struct cpu *cpu);
 uint8_t get_operand_as_value(enum addressing_mode addressing_mode, struct cpu *cpu);
 uint16_t concat_bytes(uint8_t low_byte, uint8_t high_byte);
+char *disassemble_operand(struct cpu *cpu);
