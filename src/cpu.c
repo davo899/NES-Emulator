@@ -5,16 +5,11 @@
 #include <stdbool.h>
 
 void step_cpu(struct cpu *cpu) {
-  if (cpu->instruction_cycles_remaining == 0)
-    if (cpu->working) {
-      perform_instruction(cpu->memory.read(cpu->program_counter), cpu);
-      cpu->working = false;
-    } else {
-      wait_instruction(cpu->memory.read(cpu->program_counter), cpu);
-      cpu->working = true;
-    }
-  else
-    cpu->instruction_cycles_remaining--;
+  if (cpu->instruction_cycles_remaining == 0) {
+    perform_instruction(cpu->memory.read(cpu->program_counter), cpu);
+    wait_instruction(cpu->memory.read(cpu->program_counter), cpu);
+  }
+  cpu->instruction_cycles_remaining--;
 }
 
 void load_program_at(uint16_t offset, uint8_t program[], int size, struct cpu *cpu) {

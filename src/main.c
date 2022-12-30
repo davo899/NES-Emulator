@@ -86,7 +86,11 @@ int main(int argc, char *argv[]) {
     }
     SDL_SetRenderDrawColor(rend, 0, 0, 0, 255);
     SDL_RenderClear(rend);
-  
+
+    char current_cycle[9];
+    sprintf(current_cycle, "CYCLE: %d", cpu->instruction_cycles_remaining);
+    render_text(current_cycle, rend, 1250, 800, montserrat);
+
     char current_instruction[27];
     sprintf(current_instruction, "INSTRUCTION: %s %s", get_current_instruction_name(cpu), disassemble_operand(cpu));
     render_text(current_instruction, rend, 1250, 850, montserrat);
