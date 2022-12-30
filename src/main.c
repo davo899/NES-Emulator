@@ -86,6 +86,10 @@ int main(int argc, char *argv[]) {
     }
     SDL_SetRenderDrawColor(rend, 0, 0, 0, 255);
     SDL_RenderClear(rend);
+    
+    char current_program_counter[22];
+    sprintf(current_program_counter, "PROGRAM COUNTER: %04x", cpu->program_counter);
+    render_text(current_program_counter, rend, 1250, 750, montserrat);
 
     char current_cycle[9];
     sprintf(current_cycle, "CYCLE: %d", cpu->instruction_cycles_remaining);
