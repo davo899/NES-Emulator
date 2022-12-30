@@ -88,7 +88,7 @@ char *disassemble_operand(struct cpu *cpu) {
       sprintf(text, "$%02x", cpu->memory.read(cpu->program_counter + 1));
       break;
     case RELATIVE:
-      sprintf(text, ">%02x", cpu->program_counter + (int8_t)cpu->memory.read(cpu->program_counter + 1));
+      sprintf(text, ">%02x", cpu->program_counter + 2 + (int8_t)cpu->memory.read(cpu->program_counter + 1));
       break;
     case ABSOLUTE:
       sprintf(text, "$%02x%02x", cpu->memory.read(cpu->program_counter + 2), cpu->memory.read(cpu->program_counter + 1));
