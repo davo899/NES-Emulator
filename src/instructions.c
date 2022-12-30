@@ -162,7 +162,6 @@ int cycles_table[256] = {
 
 void wait_instruction(uint8_t opcode, struct cpu *cpu) {
   cpu->instruction_cycles_remaining += cycles_table[opcode];
-  cpu->working = true;
 }
 
 void (*instruction_table[256]) (enum addressing_mode addressing_mode, struct cpu *cpu) = {
