@@ -195,15 +195,15 @@ char *get_current_instruction_name(struct cpu *cpu) {
   return disassembly_table[cpu->memory.read(cpu->program_counter)];
 }
 
-static inline uint8_t pop_byte_from_stack(struct cpu *cpu) {
+inline uint8_t pop_byte_from_stack(struct cpu *cpu) {
   return cpu->memory.read(0x100 + cpu->stack_pointer++);
 }
 
-static void push_byte_to_stack(uint8_t byte, struct cpu *cpu) {
+void push_byte_to_stack(uint8_t byte, struct cpu *cpu) {
   cpu->memory.write(byte, 0x100 + --cpu->stack_pointer);
 }
 
-static void push_PC_plus_two(struct cpu *cpu) {
+void push_PC_plus_two(struct cpu *cpu) {
   uint16_t return_address = cpu->program_counter + 2;
   push_byte_to_stack(return_address >> 8, cpu);
   push_byte_to_stack(return_address & 0xFF, cpu);
