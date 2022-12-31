@@ -367,7 +367,7 @@ static void test_RTI() {
   perform_instruction(0x40, &cpu);
   test_bytes_equal(cpu.stack_pointer, 0);
   test_bytes_equal(cpu.status, 0b11001111);
-  if (cpu.program_counter != 0xAD53) fail("Incorrect PC value");
+  if (cpu.program_counter != 0xAD54) fail("Incorrect PC value");
 }
 
 static void test_flag_clear(uint8_t opcode, int flag) {
@@ -432,7 +432,7 @@ static void test_RTS() {
   cpu.stack_pointer = 0xFE;
   perform_instruction(0x60, &cpu);
   test_bytes_equal(cpu.stack_pointer, 0);
-  if (cpu.program_counter != 0xAD53) fail("Incorrect PC value");
+  if (cpu.program_counter != 0xAD54) fail("Incorrect PC value");
 }
 
 static void test_load_register(uint8_t opcode, int reg) {

@@ -149,7 +149,7 @@ int cycles_table[256] = {
   6, 6, 0, 0, 0, 3, 5, 0, 4, 2, 2, 0, 5, 4, 6, 0,
   2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0,
 
-  0, 6, 0, 0, 3, 3, 3, 0, 2, 0, 2, 0, 4, 4, 4, 0,
+  0, 6, 2, 0, 3, 3, 3, 0, 2, 0, 2, 0, 4, 4, 4, 0,
   2, 6, 0, 0, 4, 4, 4, 0, 2, 5, 2, 0, 0, 5, 0, 0,
   2, 6, 2, 0, 3, 3, 3, 0, 2, 2, 2, 0, 4, 4, 4, 0,
   2, 5, 0, 0, 4, 4, 4, 0, 2, 4, 2, 0, 4, 4, 4, 0,
@@ -515,7 +515,7 @@ static void JSR(enum addressing_mode addressing_mode, struct cpu *cpu) {
 
 /* Return from Subroutine */
 static void RTS(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  uint8_t low_byte = pop_byte_from_stack(cpu) - 1;
+  uint8_t low_byte = pop_byte_from_stack(cpu);
   cpu->program_counter = concat_bytes(low_byte, pop_byte_from_stack(cpu));
 }
 
