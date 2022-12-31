@@ -195,7 +195,7 @@ char *get_current_instruction_name(struct cpu *cpu) {
   return disassembly_table[cpu->memory.read(cpu->program_counter)];
 }
 
-inline uint8_t pop_byte_from_stack(struct cpu *cpu) {
+uint8_t pop_byte_from_stack(struct cpu *cpu) {
   return cpu->memory.read(0x100 + cpu->stack_pointer++);
 }
 
