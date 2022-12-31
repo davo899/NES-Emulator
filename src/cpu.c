@@ -6,8 +6,20 @@
 
 void step_cpu(struct cpu *cpu) {
   if (cpu->instruction_cycles_remaining == 0) {
-    perform_instruction(cpu->memory.read(cpu->program_counter), cpu);
-    wait_instruction(cpu->memory.read(cpu->program_counter), cpu);
+    if (cpu->trigger_non_maskable_interrupt) {
+      cpu->trigger_non_maskable_interrupt = false;
+      cpu->instruction_cycles_remaining = 6;
+
+      push_byte_to_stack(cpu->program_counter >> 8, cpu);
+      push_byte_to_stack(cpu->program_counter & 0x0F, cpu);
+      push_byte_to_stack(cpu->status, cpu);
+      SET(INTR_DISABLE_FLAG, &cpu->status);
+      cpu->program_counter = ((uint16_t)cpu->memory.read(0xFFFB) << 8) | cpu->memory.read(0xFFFA);
+
+    } else {
+      perform_instruction(cpu->memory.read(cpu->program_counter), cpu);
+      wait_instruction(cpu->memory.read(cpu->program_counter), cpu);
+    }
   }
   cpu->instruction_cycles_remaining--;
 }

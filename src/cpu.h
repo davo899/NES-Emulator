@@ -24,6 +24,7 @@ struct cpu {
   uint8_t stack_pointer;
   uint16_t program_counter;
   int instruction_cycles_remaining;
+  bool trigger_non_maskable_interrupt;
   struct memory_mapping memory;
 };
 
