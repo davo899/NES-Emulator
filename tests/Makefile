@@ -1,4 +1,4 @@
-SRC=cpu instructions operand memory
+SRC=cpu instructions operand memory error
 
 ../src/%.o: $(SRC:%=../src/%.h) ../src/%.c
 	gcc -c $(subst .o,.c,$@) -o $(patsubst ../src/%.o,../src/build/%.o,$@)
