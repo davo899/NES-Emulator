@@ -360,9 +360,9 @@ static void test_BRK() {
 
 static void test_RTI() {
   reset_cpu();
-  cpu.memory.memory[0x1FF] = 0xAD;
-  cpu.memory.memory[0x1FE] = 0x53;
-  cpu.memory.memory[0x1FD] = 0b11111111;
+  cpu.memory.memory[0x1FF] = 0b11111111;
+  cpu.memory.memory[0x1FE] = 0xAD;
+  cpu.memory.memory[0x1FD] = 0x53;
   cpu.stack_pointer = 0xFD;
   perform_instruction(0x40, &cpu);
   test_bytes_equal(cpu.stack_pointer, 0);
