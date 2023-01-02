@@ -19,6 +19,8 @@ struct ppu *ppu;
 struct apu *apu;
 uint8_t *ram;
 uint8_t *rom;
+uint8_t controller;
+uint8_t controller_buffer;
 int cycle = 0;
 
 const SDL_Color white = {255, 255, 255, 255};
@@ -46,7 +48,12 @@ static uint8_t NES_read(uint16_t address) {
   }
   else if (0x4000 <= address && address <= 0x4014) return 0;
   else if (address == 0x4015) return 0;                      // APU SND_CHN
-  else if (address == 0x4016 | address == 0x4017) return 0;  // Joystick data
+  else if (address == 0x4016) {
+    uint8_t data = controller_buffer >> 7;
+    controller_buffer <<= 1;
+    return data;
+  }
+  else if (address == 0x4017) return 0;  // Second controller
   else if (0x4018 <= address && address <= 0x401F) return 0;
   else if (0x4020 <= address && address <= 0x7FFF) return 0; // Extra game space
   else return rom[address & 0b0111111111111111];
@@ -99,6 +106,7 @@ static void NES_write(uint8_t data, uint16_t address) {
     }
   }
   else if (address < 0x4014) apu_write(apu, address & 0b0000000000001111, data);
+  else if (address == 0x4016) controller_buffer = controller;
 }
 
 static void cycle_clock(struct cpu *cpu, struct ppu *ppu, SDL_Renderer *rend) {
@@ -206,6 +214,7 @@ int main(int argc, char *argv[]) {
         break;
 
       } else if (event.type == SDL_KEYDOWN) {
+        /*
         switch (event.key.keysym.sym) {
         case SDLK_SPACE:
           while (cpu->instruction_cycles_remaining != 0) cycle_clock(cpu, ppu, rend);
@@ -224,7 +233,7 @@ int main(int argc, char *argv[]) {
         
         default:
           break;
-        }
+        }*/
       }
     }
     SDL_SetRenderDrawColor(rend, 0, 0, 0, 255);
@@ -268,6 +277,18 @@ int main(int argc, char *argv[]) {
     SDL_RenderDrawLine(rend, 0, 3 * 240, 3 * 341, 3 * 240);
 
     SDL_RenderPresent(rend);
+
+    int numkeys;
+    uint8_t *keys = SDL_GetKeyboardState(&numkeys);
+    controller = 0;
+    if (keys[SDL_SCANCODE_SPACE])  controller |= 0b10000000;
+    if (keys[SDL_SCANCODE_LSHIFT]) controller |= 0b01000000;
+    if (keys[SDL_SCANCODE_X])      controller |= 0b00100000;
+    if (keys[SDL_SCANCODE_C])      controller |= 0b00010000;
+    if (keys[SDL_SCANCODE_W])      controller |= 0b00001000;
+    if (keys[SDL_SCANCODE_S])      controller |= 0b00000100;
+    if (keys[SDL_SCANCODE_A])      controller |= 0b00000010;
+    if (keys[SDL_SCANCODE_D])      controller |= 0b00000001;
   }
  
   SDL_DestroyRenderer(rend);
