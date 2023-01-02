@@ -2,6 +2,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
+/* This PPU code was built following the NES Emulator series by javidx9:
+   https://www.youtube.com/watch?v=-THeUXqR3zY
+*/
+
 uint8_t NES_palette[64][3] = {
   {84, 84, 84},
 	{0, 30, 116},
@@ -72,6 +76,14 @@ uint8_t NES_palette[64][3] = {
 	{0, 0, 0},
 };
 
+// https://stackoverflow.com/a/2602885
+static uint8_t flip_byte(uint8_t byte) {
+  byte = (byte & 0xF0) >> 4 | (byte & 0x0F) << 4;
+  byte = (byte & 0xCC) >> 2 | (byte & 0x33) << 2;
+  byte = (byte & 0xAA) >> 1 | (byte & 0x55) << 1;
+  return byte;
+}
+
 static void increment_scroll_x(struct ppu *ppu) {
   if (ppu->mask & 0b00011000) {
     if ((ppu->address & 0b0000000000011111) == 31) {
@@ -131,12 +143,22 @@ static void load_background_shifters(struct ppu *ppu) {
   ppu->attribute_high_shifter |= (ppu->next_tile_attribute & 0b10) ? 0xFF : 0x00;
 }
 
-static void update_background_shifters(struct ppu *ppu) {
+static void update_shifters(struct ppu *ppu) {
   if (ppu->mask & 0b00001000) {
     ppu->pattern_low_shifter <<= 1;
     ppu->pattern_high_shifter <<= 1;
     ppu->attribute_low_shifter <<= 1;
     ppu->attribute_high_shifter <<= 1;
+  }
+
+  if ((ppu->mask & 0b00010000) && 1 <= ppu->cycle && ppu->cycle < 258) {
+    for (int i = 0; i < ppu->sprite_count; i++) {
+      if (ppu->scanline_sprites[i].x > 0) ppu->scanline_sprites[i].x--;
+      else {
+        ppu->sprite_low_plane[i] <<= 1;
+        ppu->sprite_high_plane[i] <<= 1;
+      }
+    }
   }
 }
 
@@ -145,10 +167,17 @@ void step_ppu(struct ppu *ppu, struct cpu *cpu, SDL_Renderer* rend) {
 
     if (ppu->scanline == 0 && ppu->cycle == 0) ppu->cycle = 1;
 
-    if (ppu->scanline == -1 && ppu->cycle == 1) ppu->status &= 0b01111111;
+    if (ppu->scanline == -1 && ppu->cycle == 1) {
+      ppu->status &= 0b00011111; // Clear VBLANK, Sprite 0 hit and Sprite overflow flags
+
+      for (int i = 0; i < 8; i++) {
+        ppu->sprite_low_plane[i] = 0;
+        ppu->sprite_high_plane[i] = 0;
+      }
+    }
 
     if ((2 <= ppu->cycle && ppu->cycle < 258) || (321 <= ppu->cycle && ppu->cycle < 338)) {
-      update_background_shifters(ppu);
+      update_shifters(ppu);
 
       switch ((ppu->cycle - 1) % 8) {
       case 0:
@@ -200,8 +229,86 @@ void step_ppu(struct ppu *ppu, struct cpu *cpu, SDL_Renderer* rend) {
       transfer_address_x(ppu);
     }
 
-    if (ppu->cycle == 338 || ppu->cycle == 340) ppu->next_tile_id = ppu_read(ppu, 0x2000 | (ppu->address & 0xFFF));
     if (ppu->scanline == -1 && 280 <= ppu->cycle && ppu->cycle < 305) transfer_address_y(ppu);
+
+    if (ppu->cycle == 338 || ppu->cycle == 340) ppu->next_tile_id = ppu_read(ppu, 0x2000 | (ppu->address & 0xFFF));
+
+    if (ppu->cycle == 257 && ppu->scanline >= 0) {
+      memset(ppu->scanline_sprites, 0xFF, 8 * sizeof(struct sprite));
+      ppu->sprite_count = 0;
+      ppu->can_hit_sprite_zero = false;
+
+      uint8_t oam_entry = 0;
+      while (oam_entry < 64 && ppu->sprite_count <= 8) {
+        int16_t diff = ((int16_t)ppu->scanline - (int16_t)ppu->oam[oam_entry].y);
+        if (diff >= 0 && diff < ((ppu->control & 0b00100000) ? 16 : 8) && ppu->sprite_count < 8) {
+          memcpy(&ppu->scanline_sprites[ppu->sprite_count++], &ppu->oam[oam_entry], sizeof(struct sprite));
+          
+          if (oam_entry == 0) ppu->can_hit_sprite_zero = true;
+        }
+        oam_entry++;
+      }
+      if (ppu->sprite_count > 8) ppu->status |= 0b00100000;
+    }
+
+    if (ppu->cycle == 340) {
+      for (int i = 0; i < ppu->sprite_count; i++) {
+        uint8_t sprite_low_plane, sprite_high_plane;
+        uint16_t sprite_low_plane_address, sprite_high_plane_address;
+
+        if (!(ppu->control & 0b00100000)) { // 8x8 tile
+          if (!(ppu->scanline_sprites[i].attribute & 0b10000000)) { // Not flipped vertically
+            sprite_low_plane_address = 
+              ((ppu->control & 0b00001000) << 9)
+              | (ppu->scanline_sprites[i].tile_number << 4)
+              | (ppu->scanline - ppu->scanline_sprites[i].y);
+          } else {                                                  // Flipped vertically
+            sprite_low_plane_address = 
+              ((ppu->control & 0b00001000) << 9)
+              | (ppu->scanline_sprites[i].tile_number << 4)
+              | (7 - (ppu->scanline - ppu->scanline_sprites[i].y));
+          }
+        } else {                            // 8x16 tile
+          if (!(ppu->scanline_sprites[i].attribute & 0b10000000)) { // Not flipped vertically
+            if (ppu->scanline - ppu->scanline_sprites[i].y < 8) { // Top tile
+              sprite_low_plane_address =
+                ((ppu->scanline_sprites[i].tile_number & 0b00000001) << 12)
+                | ((ppu->scanline_sprites[i].tile_number & 0b11111110) << 4)
+                | ((ppu->scanline - ppu->scanline_sprites[i].y) & 0b00000111);
+            } else {                                              // Bottom tile
+              sprite_low_plane_address =
+                ((ppu->scanline_sprites[i].tile_number & 0b00000001) << 12)
+                | (((ppu->scanline_sprites[i].tile_number & 0b11111110) + 1) << 4)
+                | ((ppu->scanline - ppu->scanline_sprites[i].y) & 0b00000111);
+            }
+          } else {                                                  // Flipped vertically
+            if (ppu->scanline - ppu->scanline_sprites[i].y < 8) { // Top tile
+              sprite_low_plane_address =
+                ((ppu->scanline_sprites[i].tile_number & 0b00000001) << 12)
+                | ((ppu->scanline_sprites[i].tile_number & 0b11111110) << 4)
+                | (7 - (ppu->scanline - ppu->scanline_sprites[i].y) & 0b00000111);
+            } else {                                              // Bottom tile
+              sprite_low_plane_address =
+                ((ppu->scanline_sprites[i].tile_number & 0b00000001) << 12)
+                | (((ppu->scanline_sprites[i].tile_number & 0b11111110) + 1) << 4)
+                | (7 - (ppu->scanline - ppu->scanline_sprites[i].y) & 0b00000111);
+            }
+          }
+        }
+
+        sprite_high_plane_address = sprite_low_plane_address + 8;
+        sprite_low_plane = ppu_read(ppu, sprite_low_plane_address);
+        sprite_high_plane = ppu_read(ppu, sprite_high_plane_address);
+
+        if (ppu->scanline_sprites[i].attribute & 0b01000000) { // Flipped horizontally
+          sprite_low_plane = flip_byte(sprite_low_plane);
+          sprite_high_plane = flip_byte(sprite_high_plane);
+        }
+
+        ppu->sprite_low_plane[i] = sprite_low_plane;
+        ppu->sprite_high_plane[i] = sprite_high_plane;
+      }
+    }
 
   } else if (ppu->scanline == 241 && ppu->cycle == 1) {
     ppu->status |= 0b10000000;
@@ -222,10 +329,64 @@ void step_ppu(struct ppu *ppu, struct cpu *cpu, SDL_Renderer* rend) {
     background_palette = (pixel_palette_high << 1) | pixel_palette_low;
   }
 
-  uint8_t *colour = NES_palette[ppu_read(ppu, 0x3F00 + (background_palette << 2) + background_pixel) & 0x3F];
-  SDL_SetRenderDrawColor(rend, colour[0], colour[1], colour[2], 255);
-  SDL_Rect rect = {(ppu->cycle - 1) * 3, ppu->scanline * 3, 3, 3};
-  SDL_RenderFillRect(rend, &rect);
+  uint8_t foreground_pixel = 0;
+  uint8_t foreground_palette = 0;
+  uint8_t foreground_priority = 0;
+  if (ppu->mask & 0b00010000) {
+    ppu->sprite_zero_being_drawn = false;
+
+    for (int i = 0; i < ppu->sprite_count; i++) {
+      if (ppu->scanline_sprites[i].x == 0) { // Sprite is being drawn
+        uint8_t pixel_pattern_low = (ppu->sprite_low_plane[i] & 0b10000000) > 0;
+        uint8_t pixel_pattern_high = (ppu->sprite_high_plane[i] & 0b10000000) > 0;
+        foreground_pixel = (pixel_pattern_high << 1) | pixel_pattern_low;
+
+        foreground_palette = (ppu->scanline_sprites[i].attribute & 0b00000011) + 4;
+        foreground_priority = (ppu->scanline_sprites[i].attribute & 0b00100000) == 0;
+
+        if (foreground_pixel != 0) {
+          if (i == 0) ppu->sprite_zero_being_drawn = true;
+          break;
+        }
+      }
+    }
+  }
+
+  uint8_t pixel = 0;
+  uint8_t palette = 0;
+  if (background_pixel == 0 && foreground_pixel > 0) { // Draw foreground pixel
+    pixel = foreground_pixel;
+    palette = foreground_palette;
+  }
+  else if (background_pixel > 0 && foreground_pixel == 0) { // Draw background pixel
+    pixel = background_pixel;
+    palette = background_palette;
+  }
+  else if (background_pixel > 0 && foreground_pixel > 0) { // Draw higher priority
+    if (foreground_priority) {
+      pixel = foreground_pixel;
+      palette = foreground_palette;
+    } else {
+      pixel = background_pixel;
+      palette = background_palette;
+    }
+
+    if (ppu->can_hit_sprite_zero && ppu->sprite_zero_being_drawn 
+        && (ppu->mask & 0b00010000) && (ppu->mask & 0b00001000)) {
+      if (ppu->mask & 0b00000110) {
+        if (1 <= ppu->cycle && ppu->cycle < 258) ppu->status |= 0b01000000;
+      } else {
+        if (9 <= ppu->cycle && ppu->cycle < 258) ppu->status |= 0b01000000;
+      }
+    }
+  }
+
+  if (ppu->cycle < 256 && 0 <= ppu->scanline && ppu->scanline < 240) {
+    uint8_t *colour = NES_palette[ppu_read(ppu, 0x3F00 + (palette << 2) + pixel) & 0x3F];
+    SDL_SetRenderDrawColor(rend, colour[0], colour[1], colour[2], 255);
+    SDL_Rect rect = {(ppu->cycle - 1) * 3, ppu->scanline * 3, 3, 3};
+    SDL_RenderFillRect(rend, &rect);
+  }
 
 	if (++ppu->cycle >= 341) {
 		ppu->cycle = 0;

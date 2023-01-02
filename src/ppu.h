@@ -45,7 +45,17 @@ struct ppu {
   uint8_t data_buffer;
   bool address_latch;
 
-  struct sprite oam[64];
+  union {
+    uint8_t oam_bytes[256];
+    struct sprite oam[64];
+  };
+  struct sprite scanline_sprites[8];
+  uint8_t sprite_count;
+  uint8_t sprite_low_plane[8];
+  uint8_t sprite_high_plane[8];
+  bool can_hit_sprite_zero;
+  bool sprite_zero_being_drawn;
+
   struct tile pattern_table_left[16][16];
   struct tile pattern_table_right[16][16];
   uint8_t nametable_0[0x400];
