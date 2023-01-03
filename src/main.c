@@ -36,6 +36,18 @@ int cycle = 0;
 
 const SDL_Color white = {255, 255, 255, 255};
 
+static void reset(struct cpu *cpu, struct ppu *ppu) {
+  cpu->program_counter = ((uint16_t)cpu->memory.read(0xFFFD) << 8) | cpu->memory.read(0xFFFC);
+  cpu->stack_pointer -= 3;
+  cpu->status.interrupt_disable = 1;
+
+  ppu->control = 0;
+  ppu->mask = 0;
+  ppu->address_latch = false;
+  ppu->scroll = 0;
+  ppu->data_buffer = 0;
+}
+
 static uint8_t NES_read(uint16_t address) {
   if      (0x0000 <= address && address <= 0x1FFF) return ram[address & 0b0000011111111111];
   else if (0x2000 <= address && address <= 0x3FFF) {
@@ -143,8 +155,8 @@ static void NES_write(uint8_t data, uint16_t address) {
   else if (address == 0x4016) controller_buffer = controller;
 }
 
-static void cycle_clock(struct cpu *cpu, struct ppu *ppu, SDL_Renderer *rend) {
-  step_ppu(ppu, cpu, rend);
+static void cycle_clock(struct cpu *cpu, struct ppu *ppu, SDL_Renderer *rend, bool reset_held) {
+  step_ppu(ppu, cpu, rend, reset_held);
 
   if (cycle % 3 == 0) {
     if (performing_dma) {
@@ -165,7 +177,6 @@ static void cycle_clock(struct cpu *cpu, struct ppu *ppu, SDL_Renderer *rend) {
   }
 
   cycle++;
-  //timer_wait(CLOCK_TIME);
 }
 
 static void render_palettes(SDL_Renderer *rend, int atX, int atY, struct ppu *ppu) {
@@ -243,40 +254,6 @@ int main(int argc, char *argv[]) {
   timer_start();
   bool close = false;
   while (!close) {
-    SDL_Event event;
-
-    while (SDL_PollEvent(&event)) {
-      if (event.type == SDL_QUIT) {
-        close = true;
-        break;
-
-      } else if (event.type == SDL_KEYDOWN) {
-        switch (event.key.keysym.sym) {
-        case SDLK_z:
-          while (cpu->instruction_cycles_remaining != 0) cycle_clock(cpu, ppu, rend);
-          cycle_clock(cpu, ppu, rend);
-          cycle_clock(cpu, ppu, rend);
-          cycle_clock(cpu, ppu, rend);
-          break;
-
-        case SDLK_y:
-          while (cpu->y != 0) cycle_clock(cpu, ppu, rend);
-          break;
-
-        case SDLK_x:
-          while (cpu->x != 0) cycle_clock(cpu, ppu, rend);
-          break;
-
-        case SDLK_f:
-          while (!(ppu->status & 0b10000000)) cycle_clock(cpu, ppu, rend);
-          break;
-        
-        default:
-          break;
-        }
-      }
-    }
-
     int numkeys;
     const uint8_t *keys = SDL_GetKeyboardState(&numkeys);
     controller = 0;
@@ -288,6 +265,41 @@ int main(int argc, char *argv[]) {
     if (keys[SDL_SCANCODE_S])      controller |= 0b00000100;
     if (keys[SDL_SCANCODE_A])      controller |= 0b00000010;
     if (keys[SDL_SCANCODE_D])      controller |= 0b00000001;
+    bool reset_held = keys[SDL_SCANCODE_R];
+    if (reset_held) reset(cpu, ppu);
+
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+      if (event.type == SDL_QUIT) {
+        close = true;
+        break;
+
+      } else if (event.type == SDL_KEYDOWN) {
+        switch (event.key.keysym.sym) {
+        case SDLK_z:
+          while (cpu->instruction_cycles_remaining != 0) cycle_clock(cpu, ppu, rend, reset_held);
+          cycle_clock(cpu, ppu, rend, reset_held);
+          cycle_clock(cpu, ppu, rend, reset_held);
+          cycle_clock(cpu, ppu, rend, reset_held);
+          break;
+
+        case SDLK_y:
+          while (cpu->y != 0) cycle_clock(cpu, ppu, rend, reset_held);
+          break;
+
+        case SDLK_x:
+          while (cpu->x != 0) cycle_clock(cpu, ppu, rend, reset_held);
+          break;
+
+        case SDLK_f:
+          while (!(ppu->status & 0b10000000)) cycle_clock(cpu, ppu, rend, reset_held);
+          break;
+        
+        default:
+          break;
+        }
+      }
+    }
 
     SDL_SetRenderDrawColor(rend, 0, 0, 0, 255);
     SDL_RenderClear(rend);
@@ -323,7 +335,7 @@ int main(int argc, char *argv[]) {
     }
 #endif
 
-    for (int i = 0; i < 89342; i++) cycle_clock(cpu, ppu, rend);
+    for (int i = 0; i < 89342; i++) cycle_clock(cpu, ppu, rend, reset_held);
 
     SDL_SetRenderDrawColor(rend, 0, 0, 0, 255);
     SDL_RenderDrawLine(rend, 3 * 256, 0, 3 * 256, 3 * 262);

@@ -162,7 +162,7 @@ static void update_shifters(struct ppu *ppu) {
   }
 }
 
-void step_ppu(struct ppu *ppu, struct cpu *cpu, SDL_Renderer* rend) {
+void step_ppu(struct ppu *ppu, struct cpu *cpu, SDL_Renderer* rend, bool reset_held) {
   if (ppu->scanline >= -1 && ppu->scanline < 240) {
 
     if (ppu->scanline == 0 && ppu->cycle == 0) ppu->cycle = 1;
@@ -382,7 +382,7 @@ void step_ppu(struct ppu *ppu, struct cpu *cpu, SDL_Renderer* rend) {
     }
   }
 
-  if (ppu->cycle <= 256 && 0 <= ppu->scanline && ppu->scanline < 240) {
+  if (!reset_held && ppu->cycle <= 256 && 0 <= ppu->scanline && ppu->scanline < 240) {
     uint8_t *colour = NES_palette[ppu_read(ppu, 0x3F00 + (palette << 2) + pixel) & 0x3F];
     SDL_SetRenderDrawColor(rend, colour[0], colour[1], colour[2], 255);
     SDL_Rect rect = {(ppu->cycle - 1) * 3, ppu->scanline * 3, 3, 3};

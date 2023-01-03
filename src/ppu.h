@@ -78,7 +78,7 @@ struct ppu {
   int cycle;
 };
 
-void step_ppu(struct ppu *ppu, struct cpu *cpu, SDL_Renderer* rend);
+void step_ppu(struct ppu *ppu, struct cpu *cpu, SDL_Renderer* rend, bool reset_held);
 uint8_t ppu_read(struct ppu *ppu, uint16_t address);
 void ppu_write(struct ppu *ppu, uint16_t address, uint8_t data);
 
