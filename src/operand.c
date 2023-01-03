@@ -43,6 +43,7 @@ enum addressing_mode get_addressing_mode(uint8_t opcode) {
 
 static uint16_t get_operand(enum addressing_mode addressing_mode, struct cpu *cpu) {
   uint16_t address;
+  uint8_t target;
   switch (addressing_mode) {
     case IMMEDIATE:
     case ZERO_PAGE:
@@ -59,11 +60,11 @@ static uint16_t get_operand(enum addressing_mode addressing_mode, struct cpu *cp
       address = absolute(cpu);
       return concat_bytes(cpu->memory.read(address), cpu->memory.read(address + 1));
     case X_INDIRECT:
-      address = next_byte(cpu) + cpu->x;
-      return concat_bytes(cpu->memory.read(address), cpu->memory.read(address + 1));
+      target = next_byte(cpu) + cpu->x;
+      return concat_bytes(cpu->memory.read(target), cpu->memory.read((uint8_t)(target + 1)));
     case INDIRECT_Y:
-      address = next_byte(cpu);
-      return concat_bytes(cpu->memory.read(address), cpu->memory.read(address + 1)) + cpu->y;
+      target = next_byte(cpu);
+      return concat_bytes(cpu->memory.read(target), cpu->memory.read((uint8_t)(target + 1))) + cpu->y;
     case ZERO_PAGE_X:
       return (uint8_t)(next_byte(cpu) + cpu->x);
     case ZERO_PAGE_Y:
