@@ -57,8 +57,9 @@ static uint16_t get_operand(enum addressing_mode addressing_mode, struct cpu *cp
     case ABSOLUTE_Y:
       return absolute(cpu) + cpu->y;
     case INDIRECT:
-      address = absolute(cpu);
-      return concat_bytes(cpu->memory.read(address), cpu->memory.read(address + 1));
+      uint8_t low_byte = next_byte(cpu);
+      uint16_t high_byte = next_byte(cpu) << 8;
+      return concat_bytes(cpu->memory.read(high_byte + low_byte), cpu->memory.read(high_byte + (uint8_t)(low_byte + 1)));
     case X_INDIRECT:
       target = next_byte(cpu) + cpu->x;
       return concat_bytes(cpu->memory.read(target), cpu->memory.read((uint8_t)(target + 1)));

@@ -424,7 +424,7 @@ static void CPY(enum addressing_mode addressing_mode, struct cpu *cpu) {
 /* Force Break */
 static void BRK(enum addressing_mode addressing_mode, struct cpu *cpu) {
   push_PC_plus_two(cpu);
-  push_byte_to_stack(cpu->status.byte | ((uint8_t)1 << 4), cpu);
+  push_byte_to_stack(cpu->status.byte | 0b00110000, cpu);
   cpu->status.interrupt_disable = 1;
   cpu->program_counter = concat_bytes(cpu->memory.read(0xFFFE) - 1, cpu->memory.read(0xFFFF));
 }
