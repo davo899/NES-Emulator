@@ -12,8 +12,8 @@ void step_cpu(struct cpu *cpu) {
 
       push_byte_to_stack(cpu->program_counter >> 8, cpu);
       push_byte_to_stack((cpu->program_counter & 0xFF), cpu);
-      push_byte_to_stack(cpu->status, cpu);
-      SET(INTR_DISABLE_FLAG, &cpu->status);
+      push_byte_to_stack(cpu->status.byte, cpu);
+      cpu->status.interrupt_disable = 1;
       cpu->program_counter = ((uint16_t)cpu->memory.read(0xFFFB) << 8) | cpu->memory.read(0xFFFA);
 
     } else {

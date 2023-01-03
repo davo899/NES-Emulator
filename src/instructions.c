@@ -209,12 +209,12 @@ void push_PC_plus_two(struct cpu *cpu) {
   push_byte_to_stack(return_address & 0xFF, cpu);
 }
 
-static void set_NZ_flags(int8_t value, uint8_t *status_register) {
-  CLEAR(ZERO_FLAG, status_register);
-  CLEAR(NEGATIVE_FLAG, status_register);
+static void set_NZ_flags(int8_t value, struct cpu *cpu) {
+  cpu->status.zero = 0;
+  cpu->status.negative = 0;
 
-  if (value == 0)     SET(ZERO_FLAG, status_register);
-  else if (value < 0) SET(NEGATIVE_FLAG, status_register);
+  if (value == 0)     cpu->status.zero = 1;
+  else if (value < 0) cpu->status.negative = 1;
 }
 
 static inline uint8_t twos_complement_of(int8_t value) {
@@ -222,20 +222,12 @@ static inline uint8_t twos_complement_of(int8_t value) {
 }
 
 static void add_to_accumulator(uint8_t operand, struct cpu *cpu) {
-  if ((int)cpu->accumulator + (int)operand > BYTE_MAX) SET(CARRY_FLAG, &cpu->status);
+  if ((int)cpu->accumulator + (int)operand > BYTE_MAX) cpu->status.carry = 1;
 
   uint8_t result = cpu->accumulator + operand;
-  if (BITN(7, (cpu->accumulator ^ result) & (operand ^ result))) SET(OVERFLOW_FLAG, &cpu->status);
+  if ((cpu->accumulator ^ result) & (operand ^ result) & 0b10000000) cpu->status.overflow = 1;
 
   cpu->accumulator = result;
-}
-
-static void shift(bool left, enum addressing_mode addressing_mode, struct cpu *cpu) {
-  CLEAR(CARRY_FLAG, &cpu->status);
-  uint8_t *target = addressing_mode == ACCUMULATOR ? &cpu->accumulator : &cpu->memory.memory[get_operand_as_address(addressing_mode, cpu)];
-  if (BITN(left ? 7 : 0, *target)) SET(CARRY_FLAG, &cpu->status);
-  if (left) *target <<= 1; else *target >>= 1;
-  set_NZ_flags(*target, &cpu->status);
 }
 
 /* No Operation */
@@ -243,163 +235,175 @@ static void NOP(enum addressing_mode addressing_mode, struct cpu *cpu) {}
 
 /* Add to Accumulator with Carry */
 static void ADC(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  CLEAR(OVERFLOW_FLAG, &cpu->status);
-
-  if (BITN(CARRY_FLAG, cpu->status)) {
-    CLEAR(CARRY_FLAG, &cpu->status);
-    add_to_accumulator(1, cpu);
-  } else
-    CLEAR(CARRY_FLAG, &cpu->status);
-
-  add_to_accumulator(get_operand_as_value(addressing_mode, cpu), cpu);
-
-  if (BITN(DECIMAL_FLAG, cpu->status)) {
-    if ((cpu->accumulator & 0xF) > 9) add_to_accumulator(6, cpu);
-    if ((cpu->accumulator >> 4) > 9)  add_to_accumulator(0x60, cpu);
-  }
-
-  set_NZ_flags(cpu->accumulator, &cpu->status);
+  uint8_t operand = get_operand_as_value(addressing_mode, cpu);
+  uint16_t result = (uint16_t)cpu->accumulator + (uint16_t)operand + (uint16_t)cpu->status.carry;
+  cpu->status.carry = result > 255;
+  cpu->status.overflow = ((result ^ (uint16_t)cpu->accumulator) & (result ^ (uint16_t)operand) & 0b0000000010000000) > 0;
+  result &= 0b0000000011111111;
+  set_NZ_flags(result, cpu);
+  cpu->accumulator = result;
 }
 
 /* Subtract from Accumulator with Borrow */
 static void SBC(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  CLEAR(OVERFLOW_FLAG, &cpu->status);
-
-  if (!BITN(CARRY_FLAG, cpu->status)) {
-    add_to_accumulator(twos_complement_of(1), cpu);
-  } else
-    CLEAR(CARRY_FLAG, &cpu->status);
-
-  add_to_accumulator(twos_complement_of(get_operand_as_value(addressing_mode, cpu)), cpu);
-
-  if (BITN(DECIMAL_FLAG, cpu->status)) {
-    if ((cpu->accumulator & 0xF) > 9) add_to_accumulator(twos_complement_of(6), cpu);
-    if ((cpu->accumulator >> 4) > 9)  add_to_accumulator(twos_complement_of(0x60), cpu);
-  }
-
-  set_NZ_flags(cpu->accumulator, &cpu->status);
+  uint8_t operand = get_operand_as_value(addressing_mode, cpu) ^ 0b11111111;
+  uint16_t result = (uint16_t)cpu->accumulator + (uint16_t)operand + (uint16_t)cpu->status.carry;
+  cpu->status.carry = result > 255;
+  cpu->status.overflow = ((result ^ (uint16_t)cpu->accumulator) & (result ^ (uint16_t)operand) & 0b0000000010000000) > 0;
+  result &= 0b0000000011111111;
+  set_NZ_flags(result, cpu);
+  cpu->accumulator = result;
 }
 
 /* AND with Accumulator */
 static void AND(enum addressing_mode addressing_mode, struct cpu *cpu) {
   cpu->accumulator &= get_operand_as_value(addressing_mode, cpu);
-  set_NZ_flags(cpu->accumulator, &cpu->status);
+  set_NZ_flags(cpu->accumulator, cpu);
 }
 
 /* Exclusive-OR with Accumulator */
 static void EOR(enum addressing_mode addressing_mode, struct cpu *cpu) {
   cpu->accumulator ^= get_operand_as_value(addressing_mode, cpu);
-  set_NZ_flags(cpu->accumulator, &cpu->status);
+  set_NZ_flags(cpu->accumulator, cpu);
 }
 
 /* OR with Accumulator */
 static void ORA(enum addressing_mode addressing_mode, struct cpu *cpu) {
   cpu->accumulator |= get_operand_as_value(addressing_mode, cpu);
-  set_NZ_flags(cpu->accumulator, &cpu->status);
+  set_NZ_flags(cpu->accumulator, cpu);
 }
 
 /* Shift Left One Bit */
 static void ASL(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  shift(true, addressing_mode, cpu);
+  if (addressing_mode == ACCUMULATOR) {
+    cpu->status.carry = (cpu->accumulator & 0b10000000) > 0;
+    cpu->accumulator <<= 1;
+    set_NZ_flags(cpu->accumulator, cpu);
+
+  } else {
+    uint16_t address = get_operand_as_address(addressing_mode, cpu);
+    uint8_t data = cpu->memory.read(address);
+    cpu->status.carry = (data & 0b10000000) > 0;
+    data <<= 1;
+    set_NZ_flags(data, cpu);
+    cpu->memory.write(data, address);
+  }
 }
 
 /* Shift One Bit Right */
 static void LSR(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  shift(false, addressing_mode, cpu);
+  if (addressing_mode == ACCUMULATOR) {
+    cpu->status.carry = (cpu->accumulator & 0b00000001) > 0;
+    cpu->accumulator >>= 1;
+    set_NZ_flags(cpu->accumulator, cpu);
+
+  } else {
+    uint16_t address = get_operand_as_address(addressing_mode, cpu);
+    uint8_t data = cpu->memory.read(address);
+    cpu->status.carry = (data & 0b00000001) > 0;
+    data >>= 1;
+    set_NZ_flags(data, cpu);
+    cpu->memory.write(data, address);
+  }
 }
 
 /* Rotate One Bit Left */
 static void ROL(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  uint8_t *target = addressing_mode == ACCUMULATOR ? &cpu->accumulator : &cpu->memory.memory[get_operand_as_address(addressing_mode, cpu)];
-  bool carry = BITN(7, *target);
-  *target <<= 1;
-  *target |= cpu->status & 0b00000001;
-  CLEAR(CARRY_FLAG, &cpu->status);
-  if (carry) SET(CARRY_FLAG, &cpu->status);
-  set_NZ_flags(*target, &cpu->status);
+  uint8_t previous_carry = cpu->status.carry;
+  if (addressing_mode == ACCUMULATOR) {
+    cpu->status.carry = (cpu->accumulator & 0b10000000) > 0;
+    cpu->accumulator <<= 1;
+    cpu->accumulator |= previous_carry;
+    set_NZ_flags(cpu->accumulator, cpu);
+
+  } else {
+    uint16_t address = get_operand_as_address(addressing_mode, cpu);
+    uint8_t data = cpu->memory.read(address);
+    cpu->status.carry = (data & 0b10000000) > 0;
+    data <<= 1;
+    data |= previous_carry;
+    set_NZ_flags(data, cpu);
+    cpu->memory.write(data, address);
+  }
 }
 
 /* Rotate One Bit Right */
 static void ROR(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  uint8_t *target = addressing_mode == ACCUMULATOR ? &cpu->accumulator : &cpu->memory.memory[get_operand_as_address(addressing_mode, cpu)];
-  bool carry = BITN(0, *target);
-  *target >>= 1;
-  *target |= (cpu->status & 0b00000001) << 7;
-  CLEAR(CARRY_FLAG, &cpu->status);
-  if (carry) SET(CARRY_FLAG, &cpu->status);
-  set_NZ_flags(*target, &cpu->status);
+  uint8_t previous_carry = cpu->status.carry << 7;
+  if (addressing_mode == ACCUMULATOR) {
+    cpu->status.carry = (cpu->accumulator & 0b00000001) > 0;
+    cpu->accumulator >>= 1;
+    cpu->accumulator |= previous_carry;
+    set_NZ_flags(cpu->accumulator, cpu);
+
+  } else {
+    uint16_t address = get_operand_as_address(addressing_mode, cpu);
+    uint8_t data = cpu->memory.read(address);
+    cpu->status.carry = (data & 0b00000001) > 0;
+    data >>= 1;
+    data |= previous_carry;
+    set_NZ_flags(data, cpu);
+    cpu->memory.write(data, address);
+  }
 }
 
-static void branch_on_flag(bool set, int flag_bit, enum addressing_mode addressing_mode, struct cpu *cpu) {
-  bool flag_set = BITN(flag_bit, cpu->status);
-  if ((flag_set && set) || (!flag_set && !set))
-    cpu->program_counter = get_operand_as_address(addressing_mode, cpu) + 1;
-  else
-    cpu->program_counter++;
+static void branch_on_flag(bool should_branch, enum addressing_mode addressing_mode, struct cpu *cpu) {
+  if (should_branch) cpu->program_counter = get_operand_as_address(addressing_mode, cpu);
+  else               cpu->program_counter++;
 }
 
 /* Branch on Carry Clear */
 static void BCC(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  branch_on_flag(IS_CLEAR, CARRY_FLAG, addressing_mode, cpu);
+  branch_on_flag(cpu->status.carry == 0, addressing_mode, cpu);
 }
 
 /* Branch on Carry Set */
 static void BCS(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  branch_on_flag(IS_SET, CARRY_FLAG, addressing_mode, cpu);
+  branch_on_flag(cpu->status.carry == 1, addressing_mode, cpu);
 }
 
 /* Branch on Result Zero */
 static void BEQ(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  branch_on_flag(IS_SET, ZERO_FLAG, addressing_mode, cpu);
+  branch_on_flag(cpu->status.zero == 1, addressing_mode, cpu);
 }
 
 /* Branch on Result not Zero */
 static void BNE(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  branch_on_flag(IS_CLEAR, ZERO_FLAG, addressing_mode, cpu);
+  branch_on_flag(cpu->status.zero == 0, addressing_mode, cpu);
 }
 
 /* Branch on Result Minus */
 static void BMI(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  branch_on_flag(IS_SET, NEGATIVE_FLAG, addressing_mode, cpu);
+  branch_on_flag(cpu->status.negative == 1, addressing_mode, cpu);
 }
 
 /* Branch on Result Plus */
 static void BPL(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  branch_on_flag(IS_CLEAR, NEGATIVE_FLAG, addressing_mode, cpu);
+  branch_on_flag(cpu->status.negative == 0, addressing_mode, cpu);
 }
 
 /* Branch on Overflow Clear */
 static void BVC(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  branch_on_flag(IS_CLEAR, OVERFLOW_FLAG, addressing_mode, cpu);
+  branch_on_flag(cpu->status.overflow == 0, addressing_mode, cpu);
 }
 
 /* Branch on Overflow Set */
 static void BVS(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  branch_on_flag(IS_SET, OVERFLOW_FLAG, addressing_mode, cpu);
+  branch_on_flag(cpu->status.overflow == 1, addressing_mode, cpu);
 }
 
 /* Test Bits in Memory with Accumulator */
 static void BIT(enum addressing_mode addressing_mode, struct cpu *cpu) {
   uint8_t operand = get_operand_as_value(addressing_mode, cpu);
-  cpu->status &= 0b00111111;
-  cpu->status |= operand & 0b11000000;
-
-  CLEAR(ZERO_FLAG, &cpu->status);
-  if (!(cpu->accumulator & operand)) SET(ZERO_FLAG, &cpu->status);
+  cpu->status.byte &= 0b00111111;
+  cpu->status.byte |= operand & 0b11000000;
+  cpu->status.zero = (cpu->accumulator & operand) == 0;
 }
 
 static void compare(uint8_t left, uint8_t right, struct cpu *cpu) {
-  CLEAR(CARRY_FLAG, &cpu->status);
-  CLEAR(NEGATIVE_FLAG, &cpu->status);
-  CLEAR(ZERO_FLAG, &cpu->status);
-
-  if (left == right) {
-    SET(ZERO_FLAG, &cpu->status);
-    SET(CARRY_FLAG, &cpu->status);
-  } else {
-    if (left > right) SET(CARRY_FLAG, &cpu->status);
-    if (BITN(7, left - right)) SET(NEGATIVE_FLAG, &cpu->status);
-  }
+  cpu->status.carry = left >= right;
+  cpu->status.zero = left == right;
+  cpu->status.negative = ((int8_t)(left - right)) < 0;
 }
 
 /* Compare with Accumulator */
@@ -420,51 +424,51 @@ static void CPY(enum addressing_mode addressing_mode, struct cpu *cpu) {
 /* Force Break */
 static void BRK(enum addressing_mode addressing_mode, struct cpu *cpu) {
   push_PC_plus_two(cpu);
-  push_byte_to_stack(cpu->status | ((uint8_t)1 << BREAK_FLAG), cpu);
-  SET(INTR_DISABLE_FLAG, &cpu->status);
+  push_byte_to_stack(cpu->status.byte | ((uint8_t)1 << 4), cpu);
+  cpu->status.interrupt_disable = 1;
   cpu->program_counter = concat_bytes(cpu->memory.read(0xFFFE) - 1, cpu->memory.read(0xFFFF));
 }
 
 /* Return from Interrupt */
 static void RTI(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  cpu->status = pop_byte_from_stack(cpu) & 0b11001111;
+  cpu->status.byte = pop_byte_from_stack(cpu) & 0b11001111;
   RTS(addressing_mode, cpu);
   cpu->program_counter--;
 }
 
 /* Clear Carry Flag */
 static void CLC(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  CLEAR(CARRY_FLAG, &cpu->status);
+  cpu->status.carry = 0;
 }
 
 /* Clear Decimal Flag */
 static void CLD(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  CLEAR(DECIMAL_FLAG, &cpu->status);
+  cpu->status.decimal = 0;
 }
 
 /* Clear Interrupt Disable Flag */
 static void CLI(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  CLEAR(INTR_DISABLE_FLAG, &cpu->status);
+  cpu->status.interrupt_disable = 0;
 }
 
 /* Clear Overflow Flag */
 static void CLV(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  CLEAR(OVERFLOW_FLAG, &cpu->status);
+  cpu->status.overflow = 0;
 }
 
 /* Set Carry Flag */
 static void SEC(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  SET(CARRY_FLAG, &cpu->status);
+  cpu->status.carry = 1;
 }
 
 /* Set Decimal Flag */
 static void SED(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  SET(DECIMAL_FLAG, &cpu->status);
+  cpu->status.decimal = 1;
 }
 
 /* Set Interrupt Disable Flag */
 static void SEI(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  SET(INTR_DISABLE_FLAG, &cpu->status);
+  cpu->status.interrupt_disable = 1;
 }
 
 /* Increment Memory by One */
@@ -472,17 +476,17 @@ static void INC(enum addressing_mode addressing_mode, struct cpu *cpu) {
   uint16_t address = get_operand_as_address(addressing_mode, cpu);
   uint8_t value = cpu->memory.read(address);
   cpu->memory.write(++value, address);
-  set_NZ_flags(value, &cpu->status);
+  set_NZ_flags(value, cpu);
 }
 
 /* Increment Index X by One */
 static void INX(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  set_NZ_flags(++cpu->x, &cpu->status);
+  set_NZ_flags(++cpu->x, cpu);
 }
 
 /* Increment Index Y by One */
 static void INY(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  set_NZ_flags(++cpu->y, &cpu->status);
+  set_NZ_flags(++cpu->y, cpu);
 }
 
 /* Decrement Memory by One */
@@ -490,17 +494,17 @@ static void DEC(enum addressing_mode addressing_mode, struct cpu *cpu) {
   uint16_t address = get_operand_as_address(addressing_mode, cpu);
   uint8_t value = cpu->memory.read(address);
   cpu->memory.write(--value, address);
-  set_NZ_flags(value, &cpu->status);
+  set_NZ_flags(value, cpu);
 }
 
 /* Decrement Index X by One */
 static void DEX(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  set_NZ_flags(--cpu->x, &cpu->status);
+  set_NZ_flags(--cpu->x, cpu);
 }
 
 /* Decrement Index Y by One */
 static void DEY(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  set_NZ_flags(--cpu->y, &cpu->status);
+  set_NZ_flags(--cpu->y, cpu);
 }
 
 /* Jump to New Location */
@@ -523,19 +527,19 @@ static void RTS(enum addressing_mode addressing_mode, struct cpu *cpu) {
 /* Load Accumulator */
 static void LDA(enum addressing_mode addressing_mode, struct cpu *cpu) {
   cpu->accumulator = get_operand_as_value(addressing_mode, cpu);
-  set_NZ_flags(cpu->accumulator, &cpu->status);
+  set_NZ_flags(cpu->accumulator, cpu);
 }
 
 /* Load Index X */
 static void LDX(enum addressing_mode addressing_mode, struct cpu *cpu) {
   cpu->x = get_operand_as_value(addressing_mode, cpu);
-  set_NZ_flags(cpu->x, &cpu->status);
+  set_NZ_flags(cpu->x, cpu);
 }
 
 /* Load Index Y */
 static void LDY(enum addressing_mode addressing_mode, struct cpu *cpu) {
   cpu->y = get_operand_as_value(addressing_mode, cpu);
-  set_NZ_flags(cpu->y, &cpu->status);
+  set_NZ_flags(cpu->y, cpu);
 }
 
 /* Store Accumulator in Memory */
@@ -560,7 +564,7 @@ static void PHA(enum addressing_mode addressing_mode, struct cpu *cpu) {
 
 /* Push Processor Status on Stack */
 static void PHP(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  push_byte_to_stack(cpu->status | 0b00110000, cpu);
+  push_byte_to_stack(cpu->status.byte | 0b00110000, cpu);
 }
 
 /* Pull Accumulator from Stack */
@@ -570,30 +574,30 @@ static void PLA(enum addressing_mode addressing_mode, struct cpu *cpu) {
 
 /* Pull Processor Status from Stack */
 static void PLP(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  cpu->status = pop_byte_from_stack(cpu) & 0b11001111;
+  cpu->status.byte = pop_byte_from_stack(cpu) & 0b11001111;
 }
 
 /* Transfer Accumulator to Index X */
 static void TAX(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  set_NZ_flags(cpu->accumulator, &cpu->status);
+  set_NZ_flags(cpu->accumulator, cpu);
   cpu->x = cpu->accumulator;
 }
 
 /* Transfer Accumulator to Index Y */
 static void TAY(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  set_NZ_flags(cpu->accumulator, &cpu->status);
+  set_NZ_flags(cpu->accumulator, cpu);
   cpu->y = cpu->accumulator;
 }
 
 /* Transfer Stack Pointer to Index X */
 static void TSX(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  set_NZ_flags(cpu->stack_pointer, &cpu->status);
+  set_NZ_flags(cpu->stack_pointer, cpu);
   cpu->x = cpu->stack_pointer;
 }
 
 /* Transfer Index X to Accumulator */
 static void TXA(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  set_NZ_flags(cpu->x, &cpu->status);
+  set_NZ_flags(cpu->x, cpu);
   cpu->accumulator = cpu->x;
 }
 
@@ -604,7 +608,7 @@ static void TXS(enum addressing_mode addressing_mode, struct cpu *cpu) {
 
 /* Transfer Index Y to Accumulator */
 static void TYA(enum addressing_mode addressing_mode, struct cpu *cpu) {
-  set_NZ_flags(cpu->y, &cpu->status);
+  set_NZ_flags(cpu->y, cpu);
   cpu->accumulator = cpu->y;
 }
 

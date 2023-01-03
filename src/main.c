@@ -346,7 +346,7 @@ int main(int argc, char *argv[]) {
     }
 
     for (int i = 0; i < 89342; i++) cycle_clock(cpu, ppu, rend);
-
+    
     for (int i = 0; i < 0x400; i++) {
       char nametable_byte[3];
       sprintf(nametable_byte, "%c", ppu_read(ppu, 0x2000 | i));

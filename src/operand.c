@@ -48,7 +48,7 @@ static uint16_t get_operand(enum addressing_mode addressing_mode, struct cpu *cp
     case ZERO_PAGE:
       return next_byte(cpu);
     case RELATIVE:
-      return cpu->program_counter + (int8_t)next_byte(cpu);
+      return cpu->program_counter + (int8_t)next_byte(cpu) + 1;
     case ABSOLUTE:
       return absolute(cpu);
     case ABSOLUTE_X:
