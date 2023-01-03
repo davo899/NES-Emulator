@@ -12,6 +12,7 @@
 #include "ppu.h"
 #include "apu.h"
 
+//#define EMULATOR_DEBUG
 #define CLOCK_TIME (1000000000 / 5370000)
 
 struct cpu *cpu;
@@ -164,38 +165,14 @@ static void cycle_clock(struct cpu *cpu, struct ppu *ppu, SDL_Renderer *rend) {
   }
 
   cycle++;
-  timer_wait(CLOCK_TIME);
-
-  /*
-  if (cycle % 3 == 0 && cpu->instruction_cycles_remaining == 1) {
-    char current_instruction[27];
-    sprintf(current_instruction, "INSTRUCTION: %s %s", get_current_instruction_name(cpu), disassemble_operand(cpu));
-    printf("%s\n", current_instruction);
-
-    char current_program_counter[22];
-    sprintf(current_program_counter, "PROGRAM COUNTER: %04x", cpu->program_counter);
-    printf("%s\n", current_program_counter);
-
-    
-    printf("%02x, %02x, %02x, %02x, %02x, %02x, %02x, %02x\n",
-      ram[0x100 + cpu->stack_pointer],
-      ram[0x100 + cpu->stack_pointer + 1],
-      ram[0x100 + cpu->stack_pointer + 2],
-      ram[0x100 + cpu->stack_pointer + 3],
-      ram[0x100 + cpu->stack_pointer + 4],
-      ram[0x100 + cpu->stack_pointer + 5],
-      ram[0x100 + cpu->stack_pointer + 6],
-      ram[0x100 + cpu->stack_pointer + 7]
-    );
-    fflush(stdout);
-  }*/
+  //timer_wait(CLOCK_TIME);
 }
 
 static void render_palettes(SDL_Renderer *rend, int atX, int atY, struct ppu *ppu) {
-  SDL_Rect border = {atX - 2, atY - 2, (10 * 4) + 4, (10 * 16) + 4};
+  SDL_Rect border = {atX - 2, atY - 2, (10 * 4) + 4, (10 * 8) + 4};
   SDL_SetRenderDrawColor(rend, 255, 255, 255, 255);
   SDL_RenderFillRect(rend, &border);
-  for (int i = 0; i < 64; i++) {
+  for (int i = 0; i < 32; i++) {
     uint8_t *colour = NES_palette[ppu_read(ppu, 0x3F00 + i)];
     SDL_Rect rect = {atX + ((i % 4) * 10), atY + ((i / 4) * 10), 10, 10};
     SDL_SetRenderDrawColor(rend, colour[0], colour[1], colour[2], 255);
@@ -244,16 +221,24 @@ int main(int argc, char *argv[]) {
   cpu->memory.read = &NES_read;
   cpu->memory.write = &NES_write;
   cpu->program_counter = ((uint16_t)cpu->memory.read(0xFFFD) << 8) | cpu->memory.read(0xFFFC);
-  ppu->mirror_mode = HORIZONTAL;
+  ppu->mirror_mode = VERTICAL;
 
   if (SDL_Init(SDL_INIT_EVERYTHING) != 0) printf("error initializing SDL: %s\n", SDL_GetError());
   if (TTF_Init() != 0) printf("SDL_ttf could not initialize! SDL_ttf Error: %s\n", TTF_GetError());
+  
+  int screen_width, screen_height;
+  screen_height = 720;
+#ifdef EMULATOR_DEBUG
+  screen_width = 1000;
+#else
+  screen_width = 768;
+#endif
 
-  SDL_Window* win = SDL_CreateWindow("GAME", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600, 900, 0);
+  SDL_Window* win = SDL_CreateWindow("GAME", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screen_width, screen_height, 0);
   Uint32 render_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
   SDL_Renderer* rend = SDL_CreateRenderer(win, -1, render_flags);
-  TTF_Font* font = TTF_OpenFont("Retro Gaming.ttf", 24);
-  TTF_Font* small_font = TTF_OpenFont("Retro Gaming.ttf", 12);
+  TTF_Font* font = TTF_OpenFont("Retro Gaming.ttf", 20);
+  TTF_Font* small_font = TTF_OpenFont("Retro Gaming.ttf", 10);
 
   timer_start();
   bool close = false;
@@ -307,57 +292,45 @@ int main(int argc, char *argv[]) {
     SDL_SetRenderDrawColor(rend, 0, 0, 0, 255);
     SDL_RenderClear(rend);
 
-    render_palettes(rend, 1300, 100, ppu);
-    render_pattern_table(rend, 1400, 100, ppu->pattern_table_left, ppu);
-    render_pattern_table(rend, 1400, 230, ppu->pattern_table_right, ppu);
+#ifdef EMULATOR_DEBUG
+    render_palettes(rend, 780, 14, ppu);
+    render_pattern_table(rend, 780, 114, ppu->pattern_table_left, ppu);
+    render_pattern_table(rend, 780, 244, ppu->pattern_table_right, ppu);
 
-    char current_byte[5];
-    sprintf(current_byte, "0x%02x", cpu->memory.read(cpu->program_counter));
-    render_text(current_byte, rend, 1200, 650, font);
-
-    for (int i = 0; i < 5; i++) {
-      char current_stack[5];
-      sprintf(current_stack, "0x%02x", cpu->memory.read(0x100 + cpu->stack_pointer + i));
-      render_text(current_stack, rend, 1300, 650 - (i * 50), font);
-    }
-
-    char current_axy[27];
-    sprintf(current_axy, "A:0x%02x X:0x%02x Y:0x%02x", cpu->accumulator, cpu->x, cpu->y);
-    render_text(current_axy, rend, 1200, 700, font);
-    
+    char current_a[6];
+    sprintf(current_a, "A: %02x", cpu->accumulator);
+    render_text(current_a, rend, 780, 400, font);
+    char current_x[6];
+    sprintf(current_x, "X: %02x", cpu->x);
+    render_text(current_x, rend, 780, 450, font);
+    char current_y[6];
+    sprintf(current_y, "Y: %02x", cpu->y);
+    render_text(current_y, rend, 780, 500, font);
     char current_program_counter[22];
-    sprintf(current_program_counter, "PROGRAM COUNTER: %04x", cpu->program_counter);
-    render_text(current_program_counter, rend, 1200, 750, font);
-
-    char current_cycle[9];
-    sprintf(current_cycle, "CYCLE: %d", cpu->instruction_cycles_remaining);
-    render_text(current_cycle, rend, 1200, 800, font);
+    sprintf(current_program_counter, "PC: %04x", cpu->program_counter);
+    render_text(current_program_counter, rend, 780, 550, font);
 
     char current_instruction[27];
-    sprintf(current_instruction, "INSTRUCTION: %s %s", get_current_instruction_name(cpu), disassemble_operand(cpu));
-    render_text(current_instruction, rend, 1200, 850, font);
+    sprintf(current_instruction, "%s %s", get_current_instruction_name(cpu), disassemble_operand(cpu));
+    render_text(current_instruction, rend, 780, 600, font);
 
     SDL_SetRenderDrawColor(rend, 255, 0, 0, 255);
     for (int i = 0; i < 8; i++) {
       if (controller & (1 << i)) {
-        SDL_Rect rect = {1200 + (i * 10), 400, 10, 10};
+        SDL_Rect rect = {780 + (i * 10), 700, 10, 10};
         SDL_RenderFillRect(rend, &rect);
       }
     }
+#endif
 
     for (int i = 0; i < 89342; i++) cycle_clock(cpu, ppu, rend);
-    
-    for (int i = 0; i < 0x400; i++) {
-      char nametable_byte[3];
-      sprintf(nametable_byte, "%c", ppu_read(ppu, 0x2000 | i));
-      render_text(nametable_byte, rend, ((i % 0x20) * 8 * 3), ((i / 0x20) * 8 * 3), small_font);
-    }
 
     SDL_SetRenderDrawColor(rend, 0, 0, 0, 255);
     SDL_RenderDrawLine(rend, 3 * 256, 0, 3 * 256, 3 * 262);
     SDL_RenderDrawLine(rend, 0, 3 * 240, 3 * 341, 3 * 240);
 
     SDL_RenderPresent(rend);
+    timer_wait(89342 * CLOCK_TIME);
   }
  
   SDL_DestroyRenderer(rend);

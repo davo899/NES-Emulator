@@ -23,5 +23,5 @@ void timer_wait(uint64_t nanoseconds) {
     QueryPerformanceCounter(&time);
   } while((time.QuadPart - previous) * (BILLION / ticksPerSecond) < nanoseconds);
   
-  previous = time.QuadPart;
+  previous += nanoseconds;
 }
