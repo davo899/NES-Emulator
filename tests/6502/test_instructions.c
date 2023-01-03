@@ -352,9 +352,9 @@ static void test_BRK() {
   cpu.memory.memory[0xFFFF] = 0x23;
   cpu.memory.memory[0xFFFE] = 0x54;
   perform_instruction(0x00, &cpu);
-  test_bytes_equal(cpu.memory.memory[0x1FF], 0x46);
-  test_bytes_equal(cpu.memory.memory[0x1FE], 0x29 + 2);
-  test_bytes_equal(cpu.memory.memory[0x1FD], 0b00010000);
+  test_bytes_equal(cpu.memory.memory[0x100], 0x46);
+  test_bytes_equal(cpu.memory.memory[0x1FF], 0x29 + 2);
+  test_bytes_equal(cpu.memory.memory[0x1FE], 0b00010000);
   test_bytes_equal(cpu.status.byte, 0b00000100);
   test_bytes_equal(cpu.stack_pointer, 0xFD);
   if (cpu.program_counter != 0x2354) fail("Incorrect PC value");
@@ -362,9 +362,9 @@ static void test_BRK() {
 
 static void test_RTI() {
   reset_cpu();
-  cpu.memory.memory[0x1FF] = 0xAD;
-  cpu.memory.memory[0x1FE] = 0x53;
-  cpu.memory.memory[0x1FD] = 0b11111111;
+  cpu.memory.memory[0x100] = 0xAD;
+  cpu.memory.memory[0x1FF] = 0x53;
+  cpu.memory.memory[0x1FE] = 0b11111111;
   cpu.stack_pointer = 0xFD;
   perform_instruction(0x40, &cpu);
   test_bytes_equal(cpu.stack_pointer, 0);
@@ -423,14 +423,14 @@ static void test_JSR() {
   cpu.program_counter = 0xFD;
   perform_instruction(0x20, &cpu);
   if (cpu.program_counter != 0x8C9F) fail("Incorrect PC value");
-  test_bytes_equal(cpu.memory.memory[0x1FF], 0x00);
-  test_bytes_equal(cpu.memory.memory[0x1FE], 0xFF);
+  test_bytes_equal(cpu.memory.memory[0x100], 0x00);
+  test_bytes_equal(cpu.memory.memory[0x1FF], 0xFF);
 }
 
 static void test_RTS() {
   reset_cpu();
-  cpu.memory.memory[0x1FF] = 0xAD;
-  cpu.memory.memory[0x1FE] = 0x53;
+  cpu.memory.memory[0x100] = 0xAD;
+  cpu.memory.memory[0x1FF] = 0x53;
   cpu.stack_pointer = 0xFE;
   perform_instruction(0x60, &cpu);
   test_bytes_equal(cpu.stack_pointer, 0);
@@ -465,7 +465,7 @@ static void test_PHA() {
   cpu.accumulator = 157;
   perform_instruction(0x48, &cpu);
   test_bytes_equal(cpu.stack_pointer, 0xFF);
-  test_bytes_equal(cpu.memory.memory[0x1FF], 157);
+  test_bytes_equal(cpu.memory.memory[0x100], 157);
 }
 
 static void test_PHP() {
@@ -473,12 +473,12 @@ static void test_PHP() {
   cpu.status.byte = 0b11001111;
   perform_instruction(0x08, &cpu);
   test_bytes_equal(cpu.stack_pointer, 0xFF);
-  test_bytes_equal(cpu.memory.memory[0x1FF], 0b11111111);
+  test_bytes_equal(cpu.memory.memory[0x100], 0b11111111);
 }
 
 static void test_PLA() {
   reset_cpu();
-  cpu.memory.memory[0x1FF] = 202;
+  cpu.memory.memory[0x100] = 202;
   cpu.stack_pointer = 0xFF;
   perform_instruction(0x68, &cpu);
   test_bytes_equal(cpu.stack_pointer, 0);
@@ -487,7 +487,7 @@ static void test_PLA() {
 
 static void test_PLP() {
   reset_cpu();
-  cpu.memory.memory[0x1FF] = 0b11111111;
+  cpu.memory.memory[0x100] = 0b11111111;
   cpu.stack_pointer = 0xFF;
   perform_instruction(0x28, &cpu);
   test_bytes_equal(cpu.stack_pointer, 0);
