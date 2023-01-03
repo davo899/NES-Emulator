@@ -429,6 +429,7 @@ static void BRK(enum addressing_mode addressing_mode, struct cpu *cpu) {
 static void RTI(enum addressing_mode addressing_mode, struct cpu *cpu) {
   cpu->status = pop_byte_from_stack(cpu) & 0b11001111;
   RTS(addressing_mode, cpu);
+  cpu->program_counter--;
 }
 
 /* Clear Carry Flag */

@@ -29,7 +29,7 @@ uint8_t dma_data;
 bool performing_dma;
 bool syncing_dma;
 
-int prg_banks = 1;
+int prg_banks = 2;
 
 int cycle = 0;
 
@@ -281,6 +281,10 @@ int main(int argc, char *argv[]) {
         case SDLK_x:
           while (cpu->x != 0) cycle_clock(cpu, ppu, rend);
           break;
+
+        case SDLK_f:
+          while (!(ppu->status & 0b10000000)) cycle_clock(cpu, ppu, rend);
+          break;
         
         default:
           break;
@@ -311,6 +315,12 @@ int main(int argc, char *argv[]) {
     sprintf(current_byte, "0x%02x", cpu->memory.read(cpu->program_counter));
     render_text(current_byte, rend, 1200, 650, font);
 
+    for (int i = 0; i < 5; i++) {
+      char current_stack[5];
+      sprintf(current_stack, "0x%02x", cpu->memory.read(0x100 + cpu->stack_pointer + i));
+      render_text(current_stack, rend, 1300, 650 - (i * 50), font);
+    }
+
     char current_axy[27];
     sprintf(current_axy, "A:0x%02x X:0x%02x Y:0x%02x", cpu->accumulator, cpu->x, cpu->y);
     render_text(current_axy, rend, 1200, 700, font);
@@ -337,12 +347,11 @@ int main(int argc, char *argv[]) {
 
     for (int i = 0; i < 89342; i++) cycle_clock(cpu, ppu, rend);
 
-    /*
     for (int i = 0; i < 0x400; i++) {
       char nametable_byte[3];
-      sprintf(nametable_byte, "%02x", ppu_read(ppu, 0x2000 | i));
+      sprintf(nametable_byte, "%c", ppu_read(ppu, 0x2000 | i));
       render_text(nametable_byte, rend, ((i % 0x20) * 8 * 3), ((i / 0x20) * 8 * 3), small_font);
-    }*/
+    }
 
     SDL_SetRenderDrawColor(rend, 0, 0, 0, 255);
     SDL_RenderDrawLine(rend, 3 * 256, 0, 3 * 256, 3 * 262);
