@@ -196,11 +196,11 @@ char *get_current_instruction_name(struct cpu *cpu) {
 }
 
 uint8_t pop_byte_from_stack(struct cpu *cpu) {
-  return cpu->memory.read(0x100 + cpu->stack_pointer++);
+  return cpu->memory.read(0x100 + ++cpu->stack_pointer);
 }
 
 void push_byte_to_stack(uint8_t byte, struct cpu *cpu) {
-  cpu->memory.write(byte, 0x100 + --cpu->stack_pointer);
+  cpu->memory.write(byte, 0x100 + cpu->stack_pointer--);
 }
 
 void push_PC_plus_two(struct cpu *cpu) {
@@ -570,6 +570,7 @@ static void PHP(enum addressing_mode addressing_mode, struct cpu *cpu) {
 /* Pull Accumulator from Stack */
 static void PLA(enum addressing_mode addressing_mode, struct cpu *cpu) {
   cpu->accumulator = pop_byte_from_stack(cpu);
+  set_NZ_flags(cpu->accumulator, cpu);
 }
 
 /* Pull Processor Status from Stack */
