@@ -30,7 +30,7 @@ uint8_t dma_data;
 bool performing_dma;
 bool syncing_dma;
 
-int prg_banks = 2;
+int prg_banks = 1;
 
 int cycle = 0;
 
@@ -216,7 +216,7 @@ int main(int argc, char *argv[]) {
   apu = calloc(1, sizeof(struct apu)); check_OOM(apu);
   ram = calloc(2048, 1); check_OOM(ram);
   rom = calloc(0x7FFF, 1); check_OOM(rom);
-  load_rom(argv[1], rom, (uint8_t *)&ppu->pattern_table_left);
+  load_rom(argv[1], rom, (uint8_t *)&ppu->pattern_table_left, &prg_banks);
 
   cpu->memory.read = &NES_read;
   cpu->memory.write = &NES_write;

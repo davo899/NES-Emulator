@@ -5,7 +5,7 @@
 
 const uint8_t header_validation[4] = {0x4E, 0x45, 0x53, 0x1A};
 
-void load_rom(char *path, uint8_t *prg_rom, uint8_t *chr_rom) {
+void load_rom(char *path, uint8_t *prg_rom, uint8_t *chr_rom, int *prg_banks) {
   FILE *file = fopen(path, "rb");
   if (file == NULL) error("ROM file not found or could not be opened");
 
@@ -13,6 +13,7 @@ void load_rom(char *path, uint8_t *prg_rom, uint8_t *chr_rom) {
   fread(header, 1, 16, file);
   for (int i = 0; i < 4; i++) if (header[i] != header_validation[i]) error("Invalid ROM file");
   uint8_t prg_rom_size = header[4];
+  *prg_banks = prg_rom_size;
   uint8_t chr_rom_size = header[5];
   uint8_t flags_6 = header[6];
 
