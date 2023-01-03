@@ -245,11 +245,10 @@ int main(int argc, char *argv[]) {
   screen_width = 768;
 #endif
 
-  SDL_Window* win = SDL_CreateWindow("GAME", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screen_width, screen_height, 0);
+  SDL_Window* win = SDL_CreateWindow("NES", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screen_width, screen_height, 0);
   Uint32 render_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
   SDL_Renderer* rend = SDL_CreateRenderer(win, -1, render_flags);
   TTF_Font* font = TTF_OpenFont("Retro Gaming.ttf", 20);
-  TTF_Font* small_font = TTF_OpenFont("Retro Gaming.ttf", 10);
 
   timer_start();
   bool close = false;
