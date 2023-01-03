@@ -65,9 +65,9 @@ static uint16_t get_operand(enum addressing_mode addressing_mode, struct cpu *cp
       address = next_byte(cpu);
       return concat_bytes(cpu->memory.read(address), cpu->memory.read(address + 1)) + cpu->y;
     case ZERO_PAGE_X:
-      return next_byte(cpu) + cpu->x;
+      return (uint8_t)(next_byte(cpu) + cpu->x);
     case ZERO_PAGE_Y:
-      return next_byte(cpu) + cpu->y;
+      return (uint8_t)(next_byte(cpu) + cpu->y);
 
     case IMPLIED:
     case ACCUMULATOR:
