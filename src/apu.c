@@ -137,17 +137,24 @@ void step_apu(struct apu *apu, int cycle) {
 
     if (half_frame_clock) {
       // Adjust note length and frequency sweep
+      if (apu->pulse1_sweep.enabled) {
+        if (apu->pulse1_sweep_timer > 0) apu->pulse1_sweep_timer--;
 
-      if (!apu->pulse1_envelope_looped) {
-        if (apu->pulse1_length_counter > 0) {
-          if (--apu->pulse1_length_counter == 0) apu->pulse1_volume = 0;
+        if (apu->pulse1_sweep_timer == 0) {
+          uint16_t change = apu->pulse1_sequencer.timer >> apu->pulse1_sweep.shift_count;
+          if (apu->pulse1_sweep.negate) change = -((int16_t)change) - 1;
+          apu->pulse1_sweep_target_period += change;
+          if (apu->pulse1_sweep_target_period > 0x7FF) apu->pulse1_volume = 0;
+          else apu->pulse1_frequency = (1789773) / (16 * (apu->pulse1_sweep_target_period + 1));
         }
       }
 
-      if (!apu->pulse2_envelope_looped) {
-        if (apu->pulse2_length_counter > 0) {
-          if (--apu->pulse2_length_counter == 0) apu->pulse2_volume = 0;
-        }
+      if (apu->pulse1_length_counter > 0) {
+        if (--apu->pulse1_length_counter == 0) apu->pulse1_volume = 0;
+      }
+
+      if (apu->pulse2_length_counter > 0) {
+        if (--apu->pulse2_length_counter == 0) apu->pulse2_volume = 0;
       }
 
       if (apu->triangle_length_counter > 0) {
@@ -181,6 +188,14 @@ void apu_write(struct apu *apu, uint16_t address, uint8_t data) {
     }
     break;
 
+  case 0x4001:
+    apu->pulse1_sweep.enabled = (data & 0b10000000) > 0;
+    apu->pulse1_sweep.period = (data & 0b01110000) >> 4;
+    apu->pulse1_sweep.negate = (data & 0b00001000) > 0;
+    apu->pulse1_sweep.shift_count = data & 0b00000111;
+    apu->pulse1_sweep_timer = apu->pulse1_sweep.period;
+    break;
+
   case 0x4002:
     apu->pulse1_sequencer.reload = (apu->pulse1_sequencer.reload & 0xFF00) | data;
     break;
@@ -188,6 +203,7 @@ void apu_write(struct apu *apu, uint16_t address, uint8_t data) {
   case 0x4003:
     apu->pulse1_sequencer.reload = ((uint16_t)(data & 0b00000111) << 8) | (apu->pulse1_sequencer.reload & 0x00FF);
     apu->pulse1_sequencer.timer = apu->pulse1_sequencer.reload;
+    apu->pulse1_sweep_target_period = apu->pulse1_sequencer.timer;
     apu->pulse1_length_counter = length_table[(data & 0b11111000) >> 3];
     apu->pulse1_volume = 15;
 

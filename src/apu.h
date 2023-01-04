@@ -20,6 +20,17 @@ struct apu {
   uint8_t pulse1_envelope;
   uint8_t pulse1_volume;
   uint8_t pulse1_length_counter;
+  union {
+    struct {
+      uint8_t shift_count : 3;
+      uint8_t negate : 1;
+      uint8_t period : 3;
+      uint8_t enabled : 1;
+    };
+    uint8_t byte;
+  } pulse1_sweep;
+  uint8_t pulse1_sweep_timer;
+  uint16_t pulse1_sweep_target_period;
 
   struct sequencer pulse2_sequencer;
   double pulse2_frequency;
