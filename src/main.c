@@ -76,7 +76,7 @@ static uint8_t NES_read(uint16_t address) {
     return data;
   }
   else if (0x4000 <= address && address <= 0x4014) return 0;
-  else if (address == 0x4015) return 0;                      // APU SND_CHN
+  else if (address == 0x4015) apu_read(apu, address);                      // APU SND_CHN
   else if (address == 0x4016) {
     uint8_t data = controller_buffer >> 7;
     controller_buffer <<= 1;
@@ -145,7 +145,7 @@ static void NES_write(uint8_t data, uint16_t address) {
       break;
     }
   }
-  else if (address < 0x4014) apu_write(apu, address & 0b0000000000001111, data);
+  else if ((0x4000 <= address && address <= 0x4013) || address == 0x4015 || address == 0x4017) apu_write(apu, address, data);
   else if (address == 0x4014) {
     dma_high = data;
     dma_low = 0;
@@ -155,8 +155,9 @@ static void NES_write(uint8_t data, uint16_t address) {
   else if (address == 0x4016) controller_buffer = controller;
 }
 
-static void cycle_clock(struct cpu *cpu, struct ppu *ppu, SDL_Renderer *rend, bool reset_held) {
+static void cycle_clock(struct cpu *cpu, struct ppu *ppu, struct apu *apu, SDL_Renderer *rend, bool reset_held) {
   step_ppu(ppu, cpu, rend, reset_held);
+  step_apu(apu, cycle);
 
   if (cycle % 3 == 0) {
     if (performing_dma) {
@@ -244,6 +245,7 @@ int main(int argc, char *argv[]) {
 #else
   screen_width = 768;
 #endif
+  init_apu(apu);
 
   SDL_Window* win = SDL_CreateWindow("NES", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screen_width, screen_height, 0);
   Uint32 render_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
@@ -276,22 +278,22 @@ int main(int argc, char *argv[]) {
       } else if (event.type == SDL_KEYDOWN) {
         switch (event.key.keysym.sym) {
         case SDLK_z:
-          while (cpu->instruction_cycles_remaining != 0) cycle_clock(cpu, ppu, rend, reset_held);
-          cycle_clock(cpu, ppu, rend, reset_held);
-          cycle_clock(cpu, ppu, rend, reset_held);
-          cycle_clock(cpu, ppu, rend, reset_held);
+          while (cpu->instruction_cycles_remaining != 0) cycle_clock(cpu, ppu, apu, rend, reset_held);
+          cycle_clock(cpu, ppu, apu, rend, reset_held);
+          cycle_clock(cpu, ppu, apu, rend, reset_held);
+          cycle_clock(cpu, ppu, apu, rend, reset_held);
           break;
 
         case SDLK_y:
-          while (cpu->y != 0) cycle_clock(cpu, ppu, rend, reset_held);
+          while (cpu->y != 0) cycle_clock(cpu, ppu, apu, rend, reset_held);
           break;
 
         case SDLK_x:
-          while (cpu->x != 0) cycle_clock(cpu, ppu, rend, reset_held);
+          while (cpu->x != 0) cycle_clock(cpu, ppu, apu, rend, reset_held);
           break;
 
         case SDLK_f:
-          while (!(ppu->status & 0b10000000)) cycle_clock(cpu, ppu, rend, reset_held);
+          while (!(ppu->status & 0b10000000)) cycle_clock(cpu, ppu, apu, rend, reset_held);
           break;
         
         default:
@@ -334,7 +336,7 @@ int main(int argc, char *argv[]) {
     }
 #endif
 
-    for (int i = 0; i < 89342; i++) cycle_clock(cpu, ppu, rend, reset_held);
+    for (int i = 0; i < 89342; i++) cycle_clock(cpu, ppu, apu, rend, reset_held);
 
     SDL_SetRenderDrawColor(rend, 0, 0, 0, 255);
     SDL_RenderDrawLine(rend, 3 * 256, 0, 3 * 256, 3 * 262);
@@ -346,6 +348,7 @@ int main(int argc, char *argv[]) {
  
   SDL_DestroyRenderer(rend);
   SDL_DestroyWindow(win);
+  quit_apu(apu);
   TTF_Quit();
   SDL_Quit();
 
