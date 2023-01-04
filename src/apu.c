@@ -42,7 +42,7 @@ static double triangle_wave(double time) {
 }
 
 static void audio_callback(void* userdata, uint8_t* stream, int len) {
-  if (sound_enabled && player->enabled) {
+  if (sound_enabled) {
     uint64_t* samples_played = (uint64_t*)userdata;
     float* fstream = (float*)(stream);
 
@@ -149,6 +149,18 @@ void step_apu(struct apu *apu, int cycle) {
         }
       }
 
+      if (apu->pulse2_sweep.enabled) {
+        if (apu->pulse2_sweep_timer > 0) apu->pulse2_sweep_timer--;
+
+        if (apu->pulse2_sweep_timer == 0) {
+          uint16_t change = apu->pulse2_sequencer.timer >> apu->pulse2_sweep.shift_count;
+          if (apu->pulse2_sweep.negate) change = -((int16_t)change);
+          apu->pulse2_sweep_target_period += change;
+          if (apu->pulse2_sweep_target_period > 0x7FF) apu->pulse2_volume = 0;
+          else apu->pulse2_frequency = (1789773) / (16 * (apu->pulse2_sweep_target_period + 1));
+        }
+      }
+
       if (apu->pulse1_length_counter > 0) {
         if (--apu->pulse1_length_counter == 0) apu->pulse1_volume = 0;
       }
@@ -223,6 +235,14 @@ void apu_write(struct apu *apu, uint16_t address, uint8_t data) {
     }
     break;
 
+  case 0x4005:
+    apu->pulse2_sweep.enabled = (data & 0b10000000) > 0;
+    apu->pulse2_sweep.period = (data & 0b01110000) >> 4;
+    apu->pulse2_sweep.negate = (data & 0b00001000) > 0;
+    apu->pulse2_sweep.shift_count = data & 0b00000111;
+    apu->pulse2_sweep_timer = apu->pulse2_sweep.period;
+    break;
+
   case 0x4006:
     apu->pulse2_sequencer.reload = (apu->pulse2_sequencer.reload & 0xFF00) | data;
     break;
@@ -230,6 +250,7 @@ void apu_write(struct apu *apu, uint16_t address, uint8_t data) {
   case 0x4007:
     apu->pulse2_sequencer.reload = ((uint16_t)(data & 0b00000111) << 8) | (apu->pulse2_sequencer.reload & 0x00FF);
     apu->pulse2_sequencer.timer = apu->pulse2_sequencer.reload;
+    apu->pulse2_sweep_target_period = apu->pulse2_sequencer.timer;
     apu->pulse2_length_counter = length_table[(data & 0b11111000) >> 3];
     apu->pulse2_volume = 15;
 
@@ -254,7 +275,23 @@ void apu_write(struct apu *apu, uint16_t address, uint8_t data) {
     break;
 
   case 0x4015:
-    apu->enabled = data & 0b00000001;
+    if (!(data & 0b00000001)) {
+      apu->pulse1_volume = 0;
+      apu->pulse1_length_counter = 0;
+    }
+    if (!(data & 0b00000010)) {
+      apu->pulse2_volume = 0;
+      apu->pulse2_length_counter = 0;
+    }
+    if (!(data & 0b00000100)) {
+      apu->triangle_volume = 0;
+      apu->triangle_length_counter = 0;
+    }
+    fflush(stdout);
+    break;
+
+  case 0x4017:
+    apu->frame_clock_counter = (apu->clock_counter % 2 == 0) ? 14914 : 14913;
     break;
   }
 }
