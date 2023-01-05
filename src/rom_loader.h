@@ -1,5 +1,6 @@
 #pragma once
 
-#include <stdint.h>
+#include "cpu.h"
+#include "ppu.h"
 
-void load_rom(char *path, uint8_t *prg_rom, uint8_t *chr_rom, int *prg_banks);
+void load_rom(char *path, struct memory_mapping *mapper, struct ppu *ppu);

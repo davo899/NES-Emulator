@@ -30,6 +30,7 @@ uint8_t dma_data;
 bool performing_dma;
 bool syncing_dma;
 
+struct memory_mapping mapper;
 int prg_banks = 1;
 
 int cycle = 0;
@@ -86,11 +87,7 @@ static uint8_t NES_read(uint16_t address) {
   }
   else if (address == 0x4017) return 0;  // Second controller
   else if (0x4018 <= address && address <= 0x401F) return 0;
-  else if (0x4020 <= address && address <= 0x7FFF) return 0; // Extra game space
-  else {
-    if (prg_banks == 1 && 0xC000 <= address) return rom[address & 0b0011111111111111];
-    else                                     return rom[address & 0b0111111111111111];
-  }
+  else return mapper.read(address);
 }
 
 static void NES_write(uint8_t data, uint16_t address) {
@@ -155,6 +152,7 @@ static void NES_write(uint8_t data, uint16_t address) {
     syncing_dma = true;
   }
   else if (address == 0x4016) controller_buffer = controller;
+  else if (0x4020 <= address) mapper.write(data, address);
 }
 
 static void cycle_clock(struct cpu *cpu, struct ppu *ppu, struct apu *apu, SDL_Renderer *rend, bool reset_held) {
@@ -230,13 +228,11 @@ int main(int argc, char *argv[]) {
   ppu = calloc(1, sizeof(struct ppu)); check_OOM(ppu);
   apu = calloc(1, sizeof(struct apu)); check_OOM(apu);
   ram = calloc(2048, 1); check_OOM(ram);
-  rom = calloc(0x7FFF, 1); check_OOM(rom);
-  load_rom(argv[1], rom, (uint8_t *)&ppu->pattern_table_left, &prg_banks);
+  load_rom(argv[1], &mapper, ppu);
 
   cpu->memory.read = &NES_read;
   cpu->memory.write = &NES_write;
   cpu->program_counter = ((uint16_t)cpu->memory.read(0xFFFD) << 8) | cpu->memory.read(0xFFFC);
-  ppu->mirror_mode = VERTICAL;
 
   if (SDL_Init(SDL_INIT_EVERYTHING) != 0) printf("error initializing SDL: %s\n", SDL_GetError());
   if (TTF_Init() != 0) printf("SDL_ttf could not initialize! SDL_ttf Error: %s\n", TTF_GetError());
