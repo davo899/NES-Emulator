@@ -13,7 +13,7 @@
 #include "apu.h"
 
 //#define EMULATOR_DEBUG
-#define CLOCK_TIME (1000000000 / 5370000)
+#define CLOCK_TIME (1000000000 / (double)5369319)
 
 struct cpu *cpu;
 struct ppu *ppu;
@@ -178,6 +178,7 @@ static void cycle_clock(struct cpu *cpu, struct ppu *ppu, struct apu *apu, SDL_R
   }
 
   cycle++;
+  timer_wait(CLOCK_TIME);
 }
 
 static void render_palettes(SDL_Renderer *rend, int atX, int atY, struct ppu *ppu) {
@@ -343,7 +344,6 @@ int main(int argc, char *argv[]) {
     SDL_RenderDrawLine(rend, 0, 3 * 240, 3 * 341, 3 * 240);
 
     SDL_RenderPresent(rend);
-    timer_wait(89342 * CLOCK_TIME);
   }
  
   SDL_DestroyRenderer(rend);

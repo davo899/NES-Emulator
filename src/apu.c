@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define FREQ_CONST (1.85056892106)
+
 uint8_t length_table[32] = {
   10, 254,
   20, 2,
@@ -55,9 +57,9 @@ static void audio_callback(void* userdata, uint8_t* stream, int len) {
       double time = (*samples_played + sid) / 44100.0;
       double radian_time = 2.0 * M_PI * time;
 
-      double pulse1 = (player->pulse1_volume / 15.0) * (sin(radian_time * player->pulse1_frequency) > player->pulse1_duty);
-      double pulse2 = (player->pulse2_volume / 15.0) * (sin(radian_time * player->pulse2_frequency) > player->pulse2_duty);
-      double triangle = (player->triangle_volume / 15.0) * triangle_wave(time * player->triangle_frequency);
+      double pulse1 = (player->pulse1_volume / 15.0) * (sin(radian_time * player->pulse1_frequency * FREQ_CONST) > player->pulse1_duty);
+      double pulse2 = (player->pulse2_volume / 15.0) * (sin(radian_time * player->pulse2_frequency * FREQ_CONST) > player->pulse2_duty);
+      double triangle = (player->triangle_volume / 15.0) * triangle_wave(time * player->triangle_frequency * FREQ_CONST);
       double noise = (player->noise_volume / 15.0) * noise_wave();
 
       fstream[2 * sid] = volume * (pulse1 + pulse2 + triangle + noise);
@@ -240,7 +242,7 @@ void apu_write(struct apu *apu, uint16_t address, uint8_t data) {
     apu->pulse1_length_counter = length_table[(data & 0b11111000) >> 3];
     apu->pulse1_volume = 15;
 
-    apu->pulse1_frequency = (1789773) / (16 * (apu->pulse1_sequencer.timer + 1));
+    apu->pulse1_frequency = (1789773) / (16.0 * (apu->pulse1_sequencer.timer + 1));
     break;
 
   case 0x4004:
@@ -258,7 +260,7 @@ void apu_write(struct apu *apu, uint16_t address, uint8_t data) {
 
   case 0x4005:
     apu->pulse2_sweep.enabled = (data & 0b10000000) > 0;
-    apu->pulse2_sweep.period = (data & 0b01110000) >> 4;
+    apu->pulse2_sweep.period = ((data & 0b01110000) >> 4) + 1;
     apu->pulse2_sweep.negate = (data & 0b00001000) > 0;
     apu->pulse2_sweep.shift_count = data & 0b00000111;
     apu->pulse2_sweep_timer = apu->pulse2_sweep.period;
@@ -275,7 +277,7 @@ void apu_write(struct apu *apu, uint16_t address, uint8_t data) {
     apu->pulse2_length_counter = length_table[(data & 0b11111000) >> 3];
     apu->pulse2_volume = 15;
 
-    apu->pulse2_frequency = (1789773) / (16 * (apu->pulse2_sequencer.timer + 1));
+    apu->pulse2_frequency = (1789773) / (16.0 * (apu->pulse2_sequencer.timer + 1));
     break;
 
   case 0x4008:
