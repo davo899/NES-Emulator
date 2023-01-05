@@ -59,7 +59,10 @@ struct apu {
   uint8_t triangle_timer;
   uint8_t triangle_length_counter;
 
+  uint8_t noise_volume;
+  bool noise_constant_volume;
   uint8_t noise_envelope;
+  bool noise_envelope_looped;
   uint8_t noise_period;
   uint8_t noise_length_counter;
 
@@ -77,7 +80,6 @@ struct apu {
 
   SDL_AudioDeviceID audio_device_id;
   uint64_t samples_played;
-  bool enabled;
 };
 
 void init_apu(struct apu *apu);

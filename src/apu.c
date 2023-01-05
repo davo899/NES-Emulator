@@ -1,6 +1,7 @@
 #include "apu.h"
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 uint8_t length_table[32] = {
   10, 254,
@@ -25,16 +26,18 @@ uint8_t length_table[32] = {
 bool sound_enabled = false;
 struct apu *player;
 
-static uint8_t step_sequencer(struct sequencer *sequencer, bool enabled, void (*change_sequence)(uint32_t *s)) {
-  if (enabled) {
-    if (--sequencer->timer == 0xFFFF) {
-      sequencer->timer = sequencer->reload + 1;
-      change_sequence(&sequencer->sequence);
-      sequencer->output = sequencer->sequence & 0x00000001;
-    }
+static uint8_t step_sequencer(struct sequencer *sequencer, void (*change_sequence)(uint32_t *s)) {
+  if (--sequencer->timer == 0xFFFF) {
+    sequencer->timer = sequencer->reload + 1;
+    change_sequence(&sequencer->sequence);
+    sequencer->output = sequencer->sequence & 0x00000001;
   }
 
   return sequencer->output;
+}
+
+static double noise_wave(void) {
+  return (double)rand() / RAND_MAX;
 }
 
 static double triangle_wave(double time) {
@@ -55,8 +58,9 @@ static void audio_callback(void* userdata, uint8_t* stream, int len) {
       double pulse1 = (player->pulse1_volume / 15.0) * (sin(radian_time * player->pulse1_frequency) > player->pulse1_duty);
       double pulse2 = (player->pulse2_volume / 15.0) * (sin(radian_time * player->pulse2_frequency) > player->pulse2_duty);
       double triangle = (player->triangle_volume / 15.0) * triangle_wave(time * player->triangle_frequency);
+      double noise = (player->noise_volume / 15.0) * noise_wave();
 
-      fstream[2 * sid] = volume * (pulse1 + pulse2 + triangle);
+      fstream[2 * sid] = volume * (pulse1 + pulse2 + triangle + noise);
     }
 
     *samples_played += (len / 8);
@@ -130,6 +134,13 @@ void step_apu(struct apu *apu, int cycle) {
       }
       if (!apu->pulse2_constant_volume) apu->pulse2_volume = apu->pulse2_envelope;
 
+      if (apu->noise_envelope > 0) {
+        if (--apu->noise_envelope == 0 && apu->noise_envelope_looped) {
+          apu->noise_envelope = 15;
+        }
+      }
+      if (!apu->noise_constant_volume) apu->noise_volume = apu->noise_envelope;
+
       if (apu->triangle_linear_counter > 0) {
         if (--apu->triangle_linear_counter == 0) apu->triangle_volume = 0;
       }
@@ -161,21 +172,31 @@ void step_apu(struct apu *apu, int cycle) {
         }
       }
 
-      if (apu->pulse1_length_counter > 0) {
-        if (--apu->pulse1_length_counter == 0) apu->pulse1_volume = 0;
+      if (!apu->pulse1_envelope_looped) {
+        if (apu->pulse1_length_counter > 0) {
+          if (--apu->pulse1_length_counter == 0) apu->pulse1_volume = 0;
+        }
       }
 
-      if (apu->pulse2_length_counter > 0) {
-        if (--apu->pulse2_length_counter == 0) apu->pulse2_volume = 0;
+      if (!apu->pulse2_envelope_looped) {
+        if (apu->pulse2_length_counter > 0) {
+          if (--apu->pulse2_length_counter == 0) apu->pulse2_volume = 0;
+        }
       }
 
       if (apu->triangle_length_counter > 0) {
         if (--apu->triangle_length_counter == 0) apu->triangle_volume = 0;
       }
+
+      if (!apu->noise_envelope_looped) {
+        if (apu->noise_length_counter > 0) {
+          if (--apu->noise_length_counter == 0) apu->noise_volume = 0;
+        }
+      }
     }
 
-    step_sequencer(&apu->pulse1_sequencer, apu->enabled, &rotate);
-    step_sequencer(&apu->pulse2_sequencer, apu->enabled, &rotate);
+    step_sequencer(&apu->pulse1_sequencer, &rotate);
+    step_sequencer(&apu->pulse2_sequencer, &rotate);
   }
 
   apu->clock_counter++;
@@ -272,6 +293,20 @@ void apu_write(struct apu *apu, uint16_t address, uint8_t data) {
     apu->triangle_volume = 15;
 
     apu->triangle_frequency = (1789773) / (32.0 * (apu->triangle_sequencer.timer + 1));
+    break;
+
+  case 0x400C:
+    apu->noise_volume = data & 0b00001111;
+    apu->noise_envelope = 15;
+    apu->noise_constant_volume = (data & 0b00010000) > 0;
+    break;
+
+  case 0x400E:
+    apu->noise_period = data & 0x0F;
+    break;
+
+  case 0x400F:
+    apu->noise_length_counter = data >> 3;
     break;
 
   case 0x4015:
