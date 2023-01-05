@@ -51,18 +51,20 @@ static void audio_callback(void* userdata, uint8_t* stream, int len) {
     uint64_t* samples_played = (uint64_t*)userdata;
     float* fstream = (float*)(stream);
 
-    static const float volume = 0.2;
-
     for (int sid = 0; sid < (len / 8); ++sid) {
       double time = (*samples_played + sid) / 44100.0;
       double radian_time = 2.0 * M_PI * time;
 
-      double pulse1 = (player->pulse1_volume / 15.0) * (sin(radian_time * player->pulse1_frequency * FREQ_CONST) > player->pulse1_duty);
-      double pulse2 = (player->pulse2_volume / 15.0) * (sin(radian_time * player->pulse2_frequency * FREQ_CONST) > player->pulse2_duty);
-      double triangle = (player->triangle_volume / 15.0) * triangle_wave(time * player->triangle_frequency * FREQ_CONST);
-      double noise = (player->noise_volume / 15.0) * noise_wave();
+      double pulse1 = player->pulse1_volume * (sin(radian_time * player->pulse1_frequency * FREQ_CONST) > player->pulse1_duty);
+      double pulse2 = player->pulse2_volume * (sin(radian_time * player->pulse2_frequency * FREQ_CONST) > player->pulse2_duty);
+      double pulse_out = 95.88 / ((8128 / (pulse1 + pulse2)) + 100);
 
-      fstream[2 * sid] = volume * (pulse1 + pulse2 + triangle + noise);
+      double triangle = player->triangle_volume * triangle_wave(time * player->triangle_frequency * FREQ_CONST);
+      double noise = player->noise_volume * noise_wave();
+      double dmc = 0;
+      double tnd_out = 159.79 / ((1 / ((triangle / 8227) + (noise / 12241) + (dmc / 22638))) + 100);
+
+      fstream[2 * sid] = pulse_out + tnd_out;
     }
 
     *samples_played += (len / 8);
