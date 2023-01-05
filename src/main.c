@@ -36,7 +36,7 @@ int cycle = 0;
 
 const SDL_Color white = {255, 255, 255, 255};
 
-static void reset(struct cpu *cpu, struct ppu *ppu) {
+static void reset(struct cpu *cpu, struct ppu *ppu, struct apu *apu) {
   cpu->program_counter = ((uint16_t)cpu->memory.read(0xFFFD) << 8) | cpu->memory.read(0xFFFC);
   cpu->stack_pointer -= 3;
   cpu->status.interrupt_disable = 1;
@@ -46,6 +46,8 @@ static void reset(struct cpu *cpu, struct ppu *ppu) {
   ppu->address_latch = false;
   ppu->scroll = 0;
   ppu->data_buffer = 0;
+
+  apu_write(apu, 0x4015, 0);
 }
 
 static uint8_t NES_read(uint16_t address) {
@@ -268,7 +270,7 @@ int main(int argc, char *argv[]) {
     if (keys[SDL_SCANCODE_A])      controller |= 0b00000010;
     if (keys[SDL_SCANCODE_D])      controller |= 0b00000001;
     bool reset_held = keys[SDL_SCANCODE_R];
-    if (reset_held) reset(cpu, ppu);
+    if (reset_held) reset(cpu, ppu, apu);
 
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
