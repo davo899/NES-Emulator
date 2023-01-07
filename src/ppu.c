@@ -413,6 +413,12 @@ uint8_t *ppu_target(struct ppu *ppu, uint16_t address) {
       else if (0x800 <= address && address <= 0xBFF) return &ppu->nametable_0[address & 0x3FF];
       else return &ppu->nametable_1[address & 0x3FF];
       break;
+      
+    case SINGLE_SCREEN_LOW_BANK:
+      return &ppu->nametable_0[address & 0x3FF];
+
+    case SINGLE_SCREEN_HIGH_BANK:
+      return &ppu->nametable_1[address & 0x3FF];
     
     default:
       break;

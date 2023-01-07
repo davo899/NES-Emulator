@@ -16,7 +16,9 @@
 
 enum mirror_mode {
   HORIZONTAL,
-  VERTICAL
+  VERTICAL,
+  SINGLE_SCREEN_LOW_BANK,
+  SINGLE_SCREEN_HIGH_BANK,
 };
 
 struct sprite {
